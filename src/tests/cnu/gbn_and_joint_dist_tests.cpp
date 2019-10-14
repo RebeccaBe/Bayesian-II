@@ -22,7 +22,7 @@
 TEST_CASE("Uniform dist and uniform gbn should be the same.") {
 	auto uniform_joint_dist = build_uniform_joint_dist(3);
 	auto uniform_gbn = build_uniform_independent_obn(3);
-	auto p_m = old::evaluate(uniform_gbn);
+	auto p_m = evaluate(uniform_gbn);
 
 	test_joint_dist_matrix_equal(uniform_joint_dist, *p_m);
 }
@@ -38,7 +38,7 @@ TEST_CASE("Joint dist and gbn should be the same 1") {
 					joint_dist.insert({ { static_cast<bool>(i1), static_cast<bool>(i2), static_cast<bool>(i3) }, 0.0 });
 
 	auto gbn = build_independent_obn({{1,0},{0.5,0.5},{0.5,0.5}});
-	auto p_m = old::evaluate(gbn);
+	auto p_m = evaluate(gbn);
 
 	test_joint_dist_matrix_equal(joint_dist, *p_m);
 }
@@ -65,7 +65,7 @@ TEST_CASE("paper_example.cnu: CNU ops on joint dist and GBN should lead to same 
 
     simplification(gbn);
 
-	auto p_m = old::evaluate(gbn);
+	auto p_m = evaluate(gbn);
 	print_matrix(std::cout, *p_m);
 	print_dist(std::cout, dist);
 
@@ -87,7 +87,7 @@ TEST_CASE("paper_example.cnu: CNU probability ops on joint dist and GBN should l
 	fire_with_probability_on_joint_dist(cn_copy, dist, {{2, 0.75},{1, 0.25}});
 
 	simplification(gbn);
-	auto p_m = old::evaluate(gbn);
+	auto p_m = evaluate(gbn);
 
 	test_joint_dist_matrix_equal(dist, *p_m);
 }
@@ -127,7 +127,7 @@ TEST_CASE("CNU ops on joint dist and GBN should lead to same dist")
 		check_gbn_integrity(gbn);
 		simplification(gbn);
 		check_gbn_integrity(gbn);
-		auto p_m = old::evaluate(gbn);
+		auto p_m = evaluate(gbn);
 		test_joint_dist_matrix_equal(joint_dist, *p_m);
 	}
 }
@@ -167,7 +167,7 @@ TEST_CASE("CNU probability ops on joint dist and GBN should lead to same dist")
 		check_gbn_integrity(gbn);
 		simplification(gbn);
 		check_gbn_integrity(gbn);
-		auto p_m = old::evaluate(gbn);
+		auto p_m = evaluate(gbn);
 		test_joint_dist_matrix_equal(joint_dist, *p_m);
 	}
 }

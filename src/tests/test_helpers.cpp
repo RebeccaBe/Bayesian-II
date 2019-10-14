@@ -7,7 +7,7 @@
 #include "../gbn/general/gbn_io.h"
 #include "../gbn/general/check.h"
 #include "../gbn/matrix/matrix_io.h"
-#include "../gbn/evaluation_new/evaluation.h"
+#include "../gbn/evaluation/evaluation.h"
 
 void test_matrices_equal(const Matrix& m1, const Matrix& m2)
 {
@@ -53,7 +53,7 @@ GBN read_and_check_gbn(std::string path)
 
 GBN check_evaluates_equal_after_operation(GBN gbn_before, std::function<GBN(GBN)> operation, std::function<void(GBN,GBN)> additional_check_after_operation)
 {
-	auto p_m_before = improved::evaluate(gbn_before);
+	auto p_m_before = evaluate(gbn_before);
 	auto& m_before = *p_m_before;
 
 	auto gbn_after = operation(gbn_before);
@@ -63,7 +63,7 @@ GBN check_evaluates_equal_after_operation(GBN gbn_before, std::function<GBN(GBN)
 
 	check_gbn_integrity(gbn_after);
 
-	auto p_m_after = improved::evaluate(gbn_after);
+	auto p_m_after = evaluate(gbn_after);
 	auto& m_after = *p_m_after;
 
 	if(!check_matrices_equal(m_before, m_after))

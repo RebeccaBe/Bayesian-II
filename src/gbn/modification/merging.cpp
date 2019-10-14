@@ -1,4 +1,4 @@
-#include "../evaluation_new/evaluation.h"
+#include "../evaluation/evaluation.h"
 #include "vertex_add_remove.h"
 #include <iostream>
 #include "../matrix/matrix_io.h"
@@ -10,7 +10,7 @@ Vertex merge_vertices(GBN& gbn, std::vector<Vertex> vertices, std::string new_no
 	auto& g = gbn.graph;
 
 	auto sub_gbn = SubGBN::make_from_vertices(gbn, vertices);
-	auto p_m = improved::evaluate(sub_gbn.gbn);
+	auto p_m = evaluate(sub_gbn.gbn);
 
 	for(auto v : vertices)
 		remove_vertex(v, gbn);

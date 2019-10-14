@@ -27,7 +27,7 @@ int main(int argc, char** argv)
 	auto gbn = read_gbn(gbn_file);
 	check_gbn_integrity(gbn);
 
-	auto m_before = old::evaluate(gbn);
+	auto m_before = evaluate(gbn);
 	print_matrix(std::cout, *m_before);
 
 	std::ofstream out_file1("before.dot");
@@ -37,7 +37,7 @@ int main(int argc, char** argv)
 
 	check_gbn_integrity(gbn);
 
-	auto m_after = old::evaluate(gbn);
+	auto m_after = evaluate(gbn);
 	print_matrix(std::cout, *m_after);
 
 	std::ofstream out_file2("after.dot");

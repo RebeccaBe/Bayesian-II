@@ -1,18 +1,13 @@
 #include "../../../../libs/catch/catch.hpp"
 
-#include "../../../gbn/general/gbn_io.h"
 #include "../../../gbn/general/subgbn.h"
 #include "../../../gbn/general/check.h"
-#include "../../../gbn/general/path_closing.h"
-#include "../../../gbn/modification/splitting.h"
 #include "../../../gbn/simplification/simplification.h"
 #include "../../../gbn/simplification/local_simplification.h"
-#include "../../../gbn/modification/merging.h"
 #include "../../../gbn/evaluation/evaluation.h"
-#include "../../../gbn/evaluation_new/evaluation.h"
 #include "../../../gbn/matrix/matrix_io.h"
 #include "../../test_helpers.h"
-#include <fstream>
+
 #include <chrono>
 
 TEST_CASE("OneB replacement (F1) should work correctly.")
@@ -116,7 +111,7 @@ TEST_CASE("duplicate_inputs2.gbn: (simplify_matrix_for_duplicate_inputs)")
 TEST_CASE("F matrices merging to diagonal matrix should work correctly (f_matrices).") {
 
 	auto gbn = read_and_check_gbn(TEST_INSTANCE_FOLDER + "f_matrices.gbn");
-	auto p_m_before = improved::evaluate(gbn);
+	auto p_m_before = evaluate(gbn);
 
     check_evaluates_equal_after_operation(gbn, [](GBN gbn) -> GBN { std::string s; merge_F_matrices_to_diagonal_matrix(gbn,0,s); return gbn; }, [](GBN gbn_before, GBN gbn_after) -> void {
         REQUIRE(boost::num_edges(gbn_before.graph) == 17);

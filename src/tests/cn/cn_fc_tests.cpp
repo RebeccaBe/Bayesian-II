@@ -15,7 +15,6 @@
 
 #include "../../gbn/general/gbn.h"
 #include "../../gbn/general/gbn_io.h"
-#include "../../gbn/evaluation_new/evaluation.h"
 #include "../../gbn/evaluation/evaluation.h"
 #include "../../gbn/matrix/matrix_io.h"
 #include "../../gbn/matrix/matrix.h"

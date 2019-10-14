@@ -2,28 +2,32 @@
 
 #include "../general/gbn.h"
 
-namespace old {
-
-	struct Wire {
-		std::vector<std::tuple<Vertex, BitVecPtr, Index>> inside_ports;
-		std::vector<std::pair<BitVecPtr, Index>> io_ports;
-		bool active = false; // TODO: remove this and only flip bits?
-		Port source;
-	};
 
 
-	struct WireStructure {
-		std::vector<BitVecPtr> vertex_input_bitvecs;
-		std::vector<BitVecPtr> vertex_output_bitvecs;
+struct Wire {
+    std::vector<std::tuple<Vertex, BitVecPtr, Index>> inside_ports;
+    std::vector<std::pair<BitVecPtr, Index>> io_ports;
+    bool active = false; // TODO: remove this and only flip bits?
+    Port source;
 
-		BitVecPtr input_bitvec;
-		BitVecPtr output_bitvec;
+    bool independent = true;
+    std::size_t master_wire;
+    //std::vector<std::size_t> slaveWires; //TODO: anderer Ansatz
+    std::size_t name; //v1
+};
 
-		std::vector<Wire> wires;
-	};
 
-	WireStructure build_wire_structure(const GBN &gbn);
+struct WireStructure {
+    std::vector<BitVecPtr> vertex_input_bitvecs;
+    std::vector<BitVecPtr> vertex_output_bitvecs;
 
-	void print_wire_structure(std::ostream &ostr, const WireStructure &wire_structure, const GBN &gbn);
+    BitVecPtr input_bitvec;
+    BitVecPtr output_bitvec;
 
-}
+    std::vector<Wire> wires;
+};
+
+
+WireStructure build_wire_structure(const GBN &gbn);
+
+void print_wire_structure(std::ostream &ostr, const WireStructure &wire_structure, const GBN &gbn);

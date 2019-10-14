@@ -1,12 +1,9 @@
 #include "../../../../libs/catch/catch.hpp"
 
-#include "../../../gbn/general/gbn_io.h"
 #include "../../../gbn/general/check.h"
 #include "../../../gbn/general/subgbn.h"
 #include "../../../gbn/modification/splitting.h"
 #include "../../../gbn/modification/merging.h"
-#include "../../../gbn/evaluation/evaluation.h"
-#include "../../../gbn/matrix/matrix_io.h"
 #include "../../test_helpers.h"
 
 TEST_CASE("split_3_2_small2.gbn: merge and split 1") 

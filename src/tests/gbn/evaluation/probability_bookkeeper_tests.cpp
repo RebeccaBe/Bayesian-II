@@ -4,7 +4,7 @@
 #include "../../test_helpers.h"
 
 TEST_CASE("ProbabilityBookkeeper should work correctly") {
-	old::ProbabilityBookkeeper bk(10, {3, 7, 8});
+	ProbabilityBookkeeper bk(10, {3, 7, 8});
 
 	REQUIRE(bk.get_product() == Approx(0));
 	bk.update_one_node(3, 0.5);

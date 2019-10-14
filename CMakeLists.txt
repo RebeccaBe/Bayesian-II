@@ -61,10 +61,6 @@ set(GBN_FILES
 	src/gbn/simplification/simplification.cpp
 	src/gbn/simplification/local_simplification.cpp
 	src/gbn/simplification/global_simplification.cpp
-
-	src/gbn/evaluation_new/evaluation.cpp
-	src/gbn/evaluation_new/probability_bookkeeper.cpp
-	src/gbn/evaluation_new/wire_structure.cpp
         )
 
 set(RUNTIME_TEST_FILES
@@ -90,8 +86,7 @@ set(TEST_FILES
 	src/tests/gbn/modification/merging_tests.cpp
 	src/tests/gbn/modification/splitting_tests.cpp
 
-	src/tests/gbn/simplification/simplification_tests.cpp
-	src/tests/gbn/simplification/local_simplification_tests.cpp
+        src/tests/gbn/simplification/local_simplification_tests.cpp
 	src/tests/gbn/simplification/global_simplification_tests.cpp
 	src/tests/gbn/simplification/automated_simplification_tests.cpp
 	src/tests/gbn/simplification/automated_local_simplification_tests.cpp
@@ -103,10 +98,7 @@ set(TEST_FILES
 set(TEST_FILES_NEW
 	src/tests/cn/cn_fc_tests.cpp
 
-        src/tests/gbn/evaluation_new/dependency_structure_tests.cpp
-        src/tests/gbn/evaluation_new/evaluation_tests_new.cpp
-
-	src/tests/gbn/simplification/local_simplification_tests.cpp
+        src/tests/gbn/simplification/local_simplification_tests.cpp
 
 	src/tests/gbn/matrix/matrix_io_tests.cpp
 
@@ -183,10 +175,6 @@ target_link_libraries(rt_gbn_uniform Boost::regex Boost::filesystem)
 add_executable(rt_demo_simplification src/runtime_tests/main_demo_simplifications.cpp)
 target_link_libraries(rt_demo_simplification core_lib)
 target_link_libraries(rt_demo_simplification Boost::regex Boost::filesystem)
-
-add_executable(rt_gbn_uniform_eval src/runtime_tests/main_gbn_uniform_random_cnu_evaluate.cpp)
-target_link_libraries(rt_gbn_uniform_eval core_lib)
-target_link_libraries(rt_gbn_uniform_eval Boost::regex Boost::filesystem)
 
 add_executable(rt_gbn_uniform_p src/runtime_tests/main_gbn_uniform_random_cnu_probability.cpp)
 target_link_libraries(rt_gbn_uniform_p core_lib)

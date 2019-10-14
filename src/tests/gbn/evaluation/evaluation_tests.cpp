@@ -16,7 +16,7 @@ TEST_CASE("Evaluation of single node should just give that matrix of node 1")
 	auto gbn = read_and_check_gbn(TEST_INSTANCE_FOLDER + "one_node.gbn");
 
 	auto sub_gbn = SubGBN::make_from_vertices(gbn, { 0 });
-	auto p_m = old::evaluate(sub_gbn.gbn);
+	auto p_m = evaluate(sub_gbn.gbn);
 
 	REQUIRE(p_m->get(BitVec("0"),BitVec("0")) == Approx(0.333333333333));
 	REQUIRE(p_m->get(BitVec("1"),BitVec("0")) == Approx(0.666666666666));
@@ -31,7 +31,7 @@ TEST_CASE("Evaluation of single node should just give that matrix of node 2")
 	std::vector<Vertex> vec({ 0 });
 
 	auto sub_gbn = SubGBN::make_from_vertices(gbn, { 0 });
-	auto wire_structure = old::build_wire_structure(sub_gbn.gbn);
+	auto wire_structure = build_wire_structure(sub_gbn.gbn);
 	REQUIRE(wire_structure.wires.size() == 4);
 	for(auto w : wire_structure.wires)
 	{
@@ -41,7 +41,7 @@ TEST_CASE("Evaluation of single node should just give that matrix of node 2")
 	REQUIRE(sub_gbn.gbn.n == 2);
 	REQUIRE(sub_gbn.gbn.m == 2);
 
-	auto p_m = old::evaluate(gbn);
+	auto p_m = evaluate(gbn);
 
 	REQUIRE(p_m->get(BitVec("00"),BitVec("00")) == Approx(0.25));
 	REQUIRE(p_m->get(BitVec("00"),BitVec("01")) == Approx(0.333333333333));
@@ -70,7 +70,7 @@ TEST_CASE("For a single node gbn every wire should have exactly one v_input bitv
 	auto gbn = read_and_check_gbn(TEST_INSTANCE_FOLDER + "one_node_two_wires.gbn");
 
 	auto sub_gbn = SubGBN::make_from_vertices(gbn, { 0 });
-	auto wire_structure = old::build_wire_structure(sub_gbn.gbn);
+	auto wire_structure = build_wire_structure(sub_gbn.gbn);
 
 	for(auto& w : wire_structure.wires)
 	{
@@ -85,9 +85,9 @@ TEST_CASE("Evaluation for split.gbn should be correct")
 	auto gbn = read_and_check_gbn(TEST_INSTANCE_FOLDER + "split.gbn");
 
 	auto sub_gbn = SubGBN::make_from_vertices(gbn, { 0, 1, 2 });
-	auto wire_structure = old::build_wire_structure(sub_gbn.gbn);
+	auto wire_structure = build_wire_structure(sub_gbn.gbn);
 
-	auto p_m = old::evaluate(sub_gbn.gbn);
+	auto p_m = evaluate(sub_gbn.gbn);
 	
 	// check dimensions
 	REQUIRE(p_m->n == 1);
@@ -110,8 +110,8 @@ TEST_CASE("Evaluation for four_nodes.gbn should be correct")
 	auto gbn = read_and_check_gbn(TEST_INSTANCE_FOLDER + "four_nodes.gbn");
 
 	auto sub_gbn = SubGBN::make_from_vertices(gbn, { 0, 1, 2, 3 });
-	auto wire_structure = old::build_wire_structure(sub_gbn.gbn);
-	auto p_m = old::evaluate(sub_gbn.gbn);
+	auto wire_structure = build_wire_structure(sub_gbn.gbn);
+	auto p_m = evaluate(sub_gbn.gbn);
 	
 	// check dimensions
 	REQUIRE(p_m->n == 2);
@@ -134,9 +134,9 @@ TEST_CASE("Evaluation for seven_nodes.gbn should work.")
 	auto gbn = read_and_check_gbn(TEST_INSTANCE_FOLDER + "seven_nodes.gbn");
 
 	auto sub_gbn = SubGBN::make_from_vertices(gbn, { 0, 1, 2, 3, 4, 5, 6 });
-	auto wire_structure = old::build_wire_structure(sub_gbn.gbn);
-	auto wire_structure2 = old::build_wire_structure(gbn);
-	auto p_m = old::evaluate(sub_gbn.gbn);
+	auto wire_structure = build_wire_structure(sub_gbn.gbn);
+	auto wire_structure2 = build_wire_structure(gbn);
+	auto p_m = evaluate(sub_gbn.gbn);
 
 	REQUIRE(wire_structure.wires.size() == wire_structure2.wires.size());
 	REQUIRE(wire_structure.wires.size() == 13);
@@ -149,7 +149,7 @@ TEST_CASE("Evaluation for seven_nodes.gbn should work.")
 TEST_CASE("Evaluating id_1.gbn should yield identity 1 -> 1") {
 	auto gbn = read_and_check_gbn(TEST_INSTANCE_FOLDER + "id_1.gbn");
 
-	auto m = old::evaluate(gbn);
+	auto m = evaluate(gbn);
 
 	unsigned long long i_max_row = 1;
 	unsigned long long i_max_col = 1;
@@ -169,7 +169,7 @@ TEST_CASE("Evaluating id_1.gbn should yield identity 1 -> 1") {
 TEST_CASE("Evaluating id_1.gbn should yield identity 2 -> 2") {
 	auto gbn = read_and_check_gbn(TEST_INSTANCE_FOLDER + "id_2.gbn");
 
-	auto m = old::evaluate(gbn);
+	auto m = evaluate(gbn);
 
 	unsigned long long i_max_row = 1;
 	unsigned long long i_max_col = 1;
@@ -184,4 +184,10 @@ TEST_CASE("Evaluating id_1.gbn should yield identity 2 -> 2") {
 			else
 				REQUIRE(m->get(i_row, i_col) == 0);
 		}
+}
+
+TEST_CASE("The evaluation of F-Matrices should result into a diagonal matrix.") {
+    auto gbn = read_and_check_gbn(TEST_INSTANCE_FOLDER + "f_matrices.gbn");
+    auto p_m = evaluate(gbn);
+    REQUIRE(p_m->type == DIAGONAL);
 }

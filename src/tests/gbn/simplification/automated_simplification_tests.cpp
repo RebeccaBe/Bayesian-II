@@ -1,16 +1,9 @@
 #include "../../../../libs/catch/catch.hpp"
 
-#include "../../../gbn/general/gbn_io.h"
 #include "../../../gbn/general/check.h"
-#include "../../../gbn/modification/splitting.h"
 #include "../../../gbn/simplification/simplification.h"
-#include "../../../gbn/modification/merging.h"
-#include "../../../gbn/evaluation/evaluation.h"
 #include "../../../gbn/general/randomized_generation.h"
-#include "../../../gbn/matrix/matrix_io.h"
 #include "../../test_helpers.h"
-
-#include <fstream>
 
 TEST_CASE("Automated: All non normalizing simplifications simplifications")
 {

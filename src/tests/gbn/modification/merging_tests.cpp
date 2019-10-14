@@ -1,11 +1,7 @@
 #include "../../../../libs/catch/catch.hpp"
 
-#include "../../../gbn/evaluation/evaluation.h"
-#include "../../../gbn/matrix/matrix_io.h"
 #include "../../../gbn/general/check.h"
-#include "../../../gbn/general/gbn_io.h"
 #include "../../../gbn/general/subgbn.h"
-#include "../../../gbn/matrix/matrix_io.h"
 #include "../../../gbn/modification/merging.h"
 #include "../../test_helpers.h"
 

@@ -58,9 +58,9 @@ TEST_CASE("substoch2.gbn: (NormalizingSubstochFront) all vertices")
 {
 	auto gbn = read_and_check_gbn(TEST_INSTANCE_FOLDER + "substoch2.gbn");
 
-	auto p_m_before = old::evaluate(gbn);
+	auto p_m_before = evaluate(gbn);
 	apply_simplifications_for_each_vertex(gbn, std::function<void(const GBN&, std::string)>(),normalize_substoch_front_vertices_without_inputs);
-	auto p_m_after = old::evaluate(gbn);
+	auto p_m_after = evaluate(gbn);
 
 	REQUIRE(p_m_before->n == p_m_after->n);
 	REQUIRE(p_m_before->m == p_m_after->m);
