@@ -156,7 +156,6 @@ TEST_CASE("CNU probability ops on joint dist and GBN should lead to same dist")
 	auto joint_dist = build_uniform_joint_dist(n_places);
 	auto rand_transition_helper = RandomTransitionHelper(cn, RandomTransitionHelper::PROBABILITY, 1, 2);
 
-
 	for(std::size_t i_simplification_step = 0; i_simplification_step < n_simplification_steps; i_simplification_step++)
 	{
 		for(std::size_t i_rand_transition = 0; i_rand_transition < n_random_transitions_per_simplify; i_rand_transition++)
