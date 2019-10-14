@@ -1,0 +1,25 @@
+#include "../../../../libs/catch/catch.hpp"
+
+#include "../../../gbn/evaluation/probability_bookkeeper.h"
+#include "../../test_helpers.h"
+
+TEST_CASE("ProbabilityBookkeeper should work correctly") {
+	old::ProbabilityBookkeeper bk(10, {3, 7, 8});
+
+	REQUIRE(bk.get_product() == Approx(0));
+	bk.update_one_node(3, 0.5);
+	REQUIRE(bk.get_product() == Approx(0));
+	bk.update_one_node(7, 0.5);
+	REQUIRE(bk.get_product() == Approx(0));
+	bk.update_one_node(8, 0.5);
+	REQUIRE(bk.get_product() == Approx(0.125));
+	bk.update_one_node(7, 0);
+	REQUIRE(bk.get_product() == Approx(0));
+	bk.update_one_node(8, 0);
+	REQUIRE(bk.get_product() == Approx(0));
+	bk.update_one_node(7, 0.25);
+	REQUIRE(bk.get_product() == Approx(0));
+	bk.update_one_node(8, 0.25);
+	REQUIRE(bk.get_product() == Approx(0.03125));
+}
+

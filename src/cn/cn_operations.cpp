@@ -1,0 +1,28 @@
+#include "cn_operations.h"
+#include <iostream>
+
+bool check_places(std::vector<std::size_t> places, const Marking& m, bool condition)
+{
+	for(const auto p: places)
+		if(m[p] != condition)
+			return false;
+
+	return true;
+}
+
+bool check_pre_condition(const Transition& t, const Marking& m)
+{
+	return check_places(t.pre, m, true);
+}
+
+void fire_transition(const Transition& t, Marking& m)
+{
+	if(!check_pre_condition(t,m))
+		throw std::logic_error("Trying to fire transition where pre or post condition is not satisfied.");	
+
+	for(const auto p: t.pre)
+		m[p] = 0;
+
+	for(const auto p: t.post)
+		m[p] = 1;
+}
