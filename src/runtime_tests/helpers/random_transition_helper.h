@@ -21,7 +21,7 @@ struct RandomTransitionHelper
 
 	std::size_t max_trans;
 
-	std::size_t valid_transitions;
+	std::size_t n_valid_transitions;
 
 	std::uniform_int_distribution<std::size_t> rand_transition;
 	std::uniform_real_distribution<double> uniform_0_1;

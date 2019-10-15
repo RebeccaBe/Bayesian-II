@@ -59,3 +59,12 @@ double get_average_post(CN cn) {
     double result = (n * 1.0) / (cn.n * 1.0);
     return result;
 }
+
+std::vector<std::size_t>get_valid_transitions(CN cn) {
+    std::vector<std::size_t> valid_transitions;
+    for(std::size_t i_transition = 0; i_transition < cn.transitions.size(); i_transition++) {
+        if(check_pre_condition(cn.transitions[i_transition],cn.m))
+            valid_transitions.push_back(i_transition);
+    }
+    return valid_transitions;
+}

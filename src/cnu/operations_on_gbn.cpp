@@ -143,6 +143,17 @@ void successp_op(const std::vector<std::vector<std::size_t>> pre_places, const s
 
     if(incorporated_transitions == 0)
         return;
+    else if(incorporated_transitions == 1) {
+        assert_op(new_pre_places[0],1, gbn);
+        check_gbn_integrity(gbn);
+
+        set_op(new_pre_places[0],0,gbn);
+        check_gbn_integrity(gbn);
+
+        set_op(new_post_places[0],1,gbn);
+        check_gbn_integrity(gbn);
+        return;
+    }
 
     std::set<std::size_t> all_places;
 	for(auto pre : new_pre_places)

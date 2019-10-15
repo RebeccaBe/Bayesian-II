@@ -37,6 +37,8 @@ struct UpdateMetaData {
 	std::string low_level_op_string;
 };
 
+void execute_probabilistic_transition(CN &cn, GBN &gbn);
+
 void do_command(std::string command_line, CN& cn, GBN& gbn, std::function<void(UpdateMetaData)> status_callback = std::function<void(UpdateMetaData)>())
 {
 	boost::trim(command_line);
@@ -89,7 +91,66 @@ void do_command(std::string command_line, CN& cn, GBN& gbn, std::function<void(U
 		return;
 	}
 
+	if(command_line.substr(0,1) == "p")
+    {
+	    std::cout << "Insert the probability distribution over the transitions as follows: (t0, 2/10) (t1, 3/10) ..." << std::endl
+	    << "Note that unmentioned transitions are assigned a probability of 0" << std::endl;
+
+        execute_probabilistic_transition(cn, gbn);
+        return;
+    }
+
 	std::cout << "Command '" << command_line << "' could not be parsed." << std::endl;
+}
+
+void execute_probabilistic_transition(CN &cn, GBN &gbn) {
+    std::string line;
+    std::getline(std::cin, line);
+    std::regex regex("^(\\(t([0-9]+), ?([0-9]+)(\\/([0-9])+)?\\) ?)+", std::regex_constants::icase);
+    std::smatch matches;
+    if(std::regex_match(line, matches, regex)) {
+        std::vector<std::pair<std::size_t, double>> transitions_w_probabilities;
+        std::vector<std::size_t> used_transitions;
+
+        std::vector<std::string> transitions_strs;
+        boost::split(transitions_strs, line, boost::is_any_of(")"));
+        transitions_strs.erase(transitions_strs.end());
+
+        for(auto transitions_str : transitions_strs) {
+            std::vector<std::string> single_transition_strs;
+            boost::trim(transitions_str);
+
+            boost::split(single_transition_strs, transitions_str, boost::is_any_of(","));
+            for(auto val_str : single_transition_strs) boost::trim(val_str);
+            std::size_t i_transition = std::stoi(single_transition_strs[0].substr(2));
+
+            if(is_in(i_transition, used_transitions)) {
+                std::cout << "Some transitions were mentioned multiple times, please try again. Please try again. To quit, please type 'exit'." << std::endl;
+                execute_probabilistic_transition(cn, gbn);
+            }
+
+            transitions_w_probabilities.emplace_back(i_transition, read_double(single_transition_strs[1]));
+            used_transitions.push_back(i_transition);
+        }
+
+        double sum = 0;
+        for (auto t : transitions_w_probabilities) sum += t.second;
+        if(sum-1 > 0.001 || 1-sum > 0.001) {
+            std::cout << "Probabilities do not add up to 1. Instead the sum equals " << std::to_string(sum)
+                      << ". Please try again. To quit, please type 'exit'.";
+            execute_probabilistic_transition(cn, gbn);
+        }
+
+        std::string operation;
+        auto callback = [&operation](std::string high_level, std::string low_level) { std::cout << high_level << " " << low_level << std::endl; };
+
+        fire_with_probability_on_gbn(cn, gbn, transitions_w_probabilities, callback);
+    }
+    else if (line.substr(0,3) == "exit") return;
+    else {
+        std::cout<<"Incorrect syntax, please try again. To quit, please type 'exit'." << std::endl;
+        execute_probabilistic_transition(cn, gbn);
+    }
 }
 
 CN get_cn(const cxxopts::ParseResult& params)
