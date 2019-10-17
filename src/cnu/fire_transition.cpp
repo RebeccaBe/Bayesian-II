@@ -82,8 +82,10 @@ void fire_transition_on_joint_dist(CN& cn, JointDist& dist, std::size_t i_transi
 }
 
 void fire_with_probability_on_gbn (CN& cn, GBN& gbn, std::vector<std::pair<std::size_t, double>> transitions, std::function<void(std::string,std::string)> status_callback) {
-    if(transitions.empty())
-        throw std::logic_error(std::string("Successp_op: No transitions have been chosen."));
+    if(transitions.empty()) {
+        std::cout << "Successp_op: No transitions have been chosen." << std::endl;
+        return;
+    }
 
     std::vector<std::pair<std::size_t, double>> valid_transitions;
     for(auto i_transition : transitions) {
@@ -180,8 +182,10 @@ void fire_with_probability_on_gbn (CN& cn, GBN& gbn, std::vector<std::pair<std::
 }
 
 void fire_with_probability_on_joint_dist(CN& cn, JointDist& dist, std::vector<std::pair<std::size_t, double>> transitions, std::function<void(std::string,std::string)> status_callback) {
-    if(transitions.empty())
-        throw std::logic_error(std::string("Successp_op: No transitions have been chosen."));
+    if(transitions.empty()) {
+        std::cout << "Successp_op: No transitions have been chosen." << std::endl;
+        return;
+    }
 
     std::vector<std::pair<std::size_t, double>> valid_transitions;
     for(auto i_transition : transitions) {

@@ -46,6 +46,8 @@ std::vector<std::pair<std::size_t, double>> RandomTransitionHelper::next_p(std::
 
     std::vector<std::pair<std::size_t, double>> transitions_w_probabilities;
 
+    n_valid_transitions=get_n_valid_transitions(cn);
+
     if(n_valid_transitions < 1)
         return transitions_w_probabilities;
 
