@@ -16,6 +16,7 @@
 #include "../../cn/randomized_generation.h"
 #include "../../cn/cn_io.h"
 #include "../../cnu/fire_transition.h"
+#include "../../cnu/operations_on_gbn.h"
 #include "../../runtime_tests/helpers/random_transition_helper.h"
 #include <random>
 
@@ -170,4 +171,28 @@ TEST_CASE("CNU probability ops on joint dist and GBN should lead to same dist")
 		auto p_m = evaluate(gbn);
 		test_joint_dist_matrix_equal(joint_dist, *p_m);
 	}
+}
+
+TEST_CASE("Preprocessing for the stochastical success should work") {
+    BitVec x;
+    x.set(0);
+    x.set(1);
+    std::vector<std::vector<std::size_t>> places;
+    std::vector<double> probs;
+    probs.push_back(0.2);
+    probs.push_back(0.3);
+    places.push_back({1,2});
+    places.push_back({1,2,3});
+
+    std::set<std::size_t> all_places;
+    for(auto pre : places)
+        all_places.insert(pre.begin(), pre.end());
+    std::map<std::size_t, std::size_t> mapping_place_key; //maps which place has which wire position
+    std::size_t index = 0;
+    for(auto place : all_places) {
+        mapping_place_key.insert(std::pair<std::size_t, std::size_t>(place, index));
+        index++;
+    }
+    auto norm = normalization_factor(x, mapping_place_key, places, probs);
+    assert(norm == 0.2);
 }
