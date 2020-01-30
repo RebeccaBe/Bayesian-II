@@ -94,6 +94,26 @@ TEST_CASE("paper_example.cnu: CNU probability ops on joint dist and GBN should l
 	test_joint_dist_matrix_equal(dist, *p_m);
 }
 
+TEST_CASE("paper_example.cnu: CNU stochastic ops on joint dist and GBN should lead to same dist")
+{
+    std::ifstream f_cn(TEST_INSTANCE_FOLDER + "paper_example.cn");
+    auto cn = read_cn(f_cn);
+    auto cn_copy = cn;
+
+    std::ifstream f_joint_dist(TEST_INSTANCE_FOLDER + "paper_example.dist");
+    auto dist = read_joint_dist(f_joint_dist);
+    std::ifstream f_gbn(TEST_INSTANCE_FOLDER + "paper_example.gbn");
+    auto gbn = read_gbn(f_gbn);
+
+    fire_with_probabilityStoch_on_gbn(cn, gbn, {{2, 0.5},{1, 0.2}, {0, 0.3}});
+    fire_with_probabilityStoch_on_joint_dist(cn_copy, dist, {{2, 0.5},{1, 0.2}, {0, 0.3}});
+
+    simplification(gbn);
+    auto p_m = evaluate(gbn);
+
+    test_joint_dist_matrix_equal(dist, *p_m);
+}
+
 TEST_CASE("CNU ops on joint dist and GBN should lead to same dist") 
 {
 	std::size_t n_places = 22;
@@ -204,19 +224,4 @@ TEST_CASE("Normalizing matrices by rows should work") {
     REQUIRE(p_matrix->get(BitVec("0"), BitVec("0")) == 0.2);
     normalize_matrix_rows(*p_matrix);
     REQUIRE(p_matrix->get(BitVec("0"), BitVec("0")) == 0.5);
-}
-
-TEST_CASE("test") {
-    std::ifstream f_joint_dist(TEST_INSTANCE_FOLDER + "paper_example.dist");
-    auto dist = read_joint_dist(f_joint_dist);
-    successStoch_op({{0},{1},{2}}, {{},{}, {}}, {0.5, 0.2, 0.3}, dist);
-
-    std::ifstream f_gbn(TEST_INSTANCE_FOLDER + "paper_example.gbn");
-    auto gbn = read_gbn(f_gbn);
-    successStoch_op({{0},{1},{2}}, {{},{}, {}}, {0.5, 0.2, 0.3}, gbn);
-    simplification(gbn);
-    auto p_m = evaluate(gbn);
-
-    test_joint_dist_matrix_equal(dist, *p_m);
-
 }
