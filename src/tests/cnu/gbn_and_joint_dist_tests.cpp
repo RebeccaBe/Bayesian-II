@@ -17,6 +17,7 @@
 #include "../../cn/cn_io.h"
 #include "../../cnu/fire_transition.h"
 #include "../../cnu/operations_on_gbn.h"
+#include "../../cnu/operations_on_joint_dist.h"
 #include "../../runtime_tests/helpers/random_transition_helper.h"
 #include <random>
 
@@ -203,4 +204,19 @@ TEST_CASE("Normalizing matrices by rows should work") {
     REQUIRE(p_matrix->get(BitVec("0"), BitVec("0")) == 0.2);
     normalize_matrix_rows(*p_matrix);
     REQUIRE(p_matrix->get(BitVec("0"), BitVec("0")) == 0.5);
+}
+
+TEST_CASE("test") {
+    std::ifstream f_joint_dist(TEST_INSTANCE_FOLDER + "paper_example.dist");
+    auto dist = read_joint_dist(f_joint_dist);
+    successStoch_op({{0},{1},{2}}, {{},{}, {}}, {0.5, 0.2, 0.3}, dist);
+
+    std::ifstream f_gbn(TEST_INSTANCE_FOLDER + "paper_example.gbn");
+    auto gbn = read_gbn(f_gbn);
+    successStoch_op({{0},{1},{2}}, {{},{}, {}}, {0.5, 0.2, 0.3}, gbn);
+    simplification(gbn);
+    auto p_m = evaluate(gbn);
+
+    test_joint_dist_matrix_equal(dist, *p_m);
+
 }

@@ -315,7 +315,7 @@ void successStoch_op(const std::vector<std::vector<std::size_t>> pre_places, con
             involved_wires_post.push_back(mapping_place_key.at(post));
         }
 
-        double probability_norm = p/normalization_factor(assignmentX, mapping_place_key, new_pre_places, new_probabilities);
+        double probability_norm = p/normalization_factor(assignmentY, mapping_place_key, new_pre_places, new_probabilities);
         matrix->add(assignmentX,assignmentY,probability_norm);
 
         std::size_t y_wire = 0;
@@ -337,14 +337,14 @@ void successStoch_op(const std::vector<std::vector<std::size_t>> pre_places, con
                     else
                         assignmentX[x_wire]=assignmentY[x_wire]; //non-involved wires don't change, hence X=Y
                 }
-                double probability_norm = p/normalization_factor(assignmentX, mapping_place_key, new_pre_places, new_probabilities);
+                double probability_norm = p/normalization_factor(assignmentY, mapping_place_key, new_pre_places, new_probabilities);
                 matrix->add(assignmentX,assignmentY,probability_norm);
                 y_wire = 0;
             }
         }
     }
 
-    normalize_matrix_rows(*matrix);
+    //normalize_matrix_rows(*matrix);
 
     auto& g = gbn.graph;
     auto& output_vertices = ::output_vertices(gbn);
@@ -371,13 +371,13 @@ void successStoch_op(const std::vector<std::vector<std::size_t>> pre_places, con
     }
 }
 
-double normalization_factor(BitVec assignmentX, std::map<std::size_t, std::size_t> mapping_place_key,
+double normalization_factor(BitVec assignmentY, std::map<std::size_t, std::size_t> mapping_place_key,
         const std::vector<std::vector<std::size_t>> pre_places, const std::vector<double> probabilities) {
     double normalization = 0;
     for(std::size_t i = 0; i < probabilities.size(); i++) {
         bool valid = 1;
         for(auto place : pre_places[i]) {
-            if(!assignmentX.test(mapping_place_key[place])) {
+            if(!assignmentY.test(mapping_place_key[place])) {
                 valid = 0;
                 break; //efficiency measure
             }
@@ -385,7 +385,7 @@ double normalization_factor(BitVec assignmentX, std::map<std::size_t, std::size_
         if (valid)
             normalization += probabilities[i];
     }
-    return normalization;
+    return (normalization > 0)? normalization : 1;
 }
 
 void normalize_matrix_rows(Matrix& matrix) {

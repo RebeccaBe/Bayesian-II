@@ -31,7 +31,7 @@ void set_op(const std::vector<std::size_t> places, bool b, JointDist& dist)
 	for(auto& [marking,p] : dist)
 	{
 		auto target = build_target_marking(marking, places, b);
-		if(target != marking)
+		if(target != marking) //Why? Post Places can be empty anyway...
 		{
 			dist[target] += p;
 			p = 0;
@@ -138,4 +138,54 @@ void successp_op(const std::vector<std::vector<std::size_t>> pre_places, const s
 	}
 
 	normalize_op(dist);
+}
+
+void successStoch_op(const std::vector<std::vector<std::size_t>> pre_places, const std::vector<std::vector<std::size_t>> post_places,
+                     const std::vector<double> probabilities, JointDist& dist) {
+    double sum = 0;
+    for(auto p : probabilities) sum += p;
+    if(sum-1 > 0.001 || 1-sum > 0.001)
+        throw std::logic_error(std::string("Probabilities do not add up to 1. Instead the sum equals " + std::to_string(sum)));
+
+
+    auto original_dist = dist;
+    for (auto& [marking,p] : dist) {dist[marking] = 0;}
+
+    for(std::size_t i = 0; i < probabilities.size(); i++) {
+        double probability = probabilities[i];
+
+        auto worker_dist = original_dist;
+        assert_non_norm_op(pre_places[i], 1, worker_dist);
+
+        // The maps are used to remember which markings lead to which target markings.
+        // To check, which markings lead up to target marking m after firing transition i, call: map_post[m]
+        std::map<std::vector<bool>, std::vector<std::vector<bool>>> map_pre, map_post;
+
+        for(auto [marking,p] : worker_dist) {
+            auto target = build_target_marking(marking, pre_places[i], 0);
+            if(target != marking)
+                map_pre[target].push_back(marking);
+        }
+        set_op(pre_places[i], 0, worker_dist);
+
+        for(auto [marking,p] : worker_dist) {
+            auto target = build_target_marking(marking, post_places[i], 1);
+            //if (target != marking) I think, I have to just omit this and it will work...
+                for (auto el : map_pre[marking]) map_post[target].push_back(el);
+        }
+
+        for (auto& [marking,p] : dist) {
+            for(auto m : map_post[marking]) {
+                double normalization_factor = 0;
+
+                for(std::size_t i = 0; i < probabilities.size(); i++)
+                    if(m == build_target_marking(m, pre_places[i], 1))
+                        normalization_factor += probabilities[i];
+
+                p += (original_dist[m] * (probability / normalization_factor));
+            }
+        }
+    }
+
+    normalize_op(dist);
 }
