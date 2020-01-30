@@ -252,7 +252,7 @@ void fire_with_probability_on_joint_dist(CN& cn, JointDist& dist, std::vector<st
 
 void fire_with_probabilityStoch_on_gbn (CN& cn, GBN& gbn, std::vector<std::pair<std::size_t, double>> transitions, std::function<void(std::string,std::string)> status_callback) {
     if(transitions.empty()) {
-        std::cout << "Successp_op: No transitions have been chosen." << std::endl;
+        std::cout << "SuccessStoch_op: No transitions have been chosen." << std::endl;
         return;
     }
 
@@ -262,7 +262,7 @@ void fire_with_probabilityStoch_on_gbn (CN& cn, GBN& gbn, std::vector<std::pair<
         if(check_pre_condition(transition, cn.m)) valid_transitions.push_back(i_transition);
     }
     if(valid_transitions.empty()) {
-        std::cout << "Successp_op: None of the transitions can be fired." << std::endl;
+        std::cout << "SuccessStoch_op: None of the transitions can be fired." << std::endl;
         return;
     }
 
@@ -320,7 +320,7 @@ void fire_with_probabilityStoch_on_gbn (CN& cn, GBN& gbn, std::vector<std::pair<
     successStoch_op(pre_places, post_places, probabilities, gbn);
     check_gbn_integrity(gbn);
     if(status_callback)
-        status_callback(std::string("successp_{")+ transitions_string +"}", std::string("successp"));
+        status_callback(std::string("successStoch_{")+ transitions_string +"}", std::string("successStoch"));
 
     if(valid_transitions.empty())
         return;
@@ -352,7 +352,7 @@ void fire_with_probabilityStoch_on_gbn (CN& cn, GBN& gbn, std::vector<std::pair<
 
 void fire_with_probabilityStoch_on_joint_dist(CN& cn, JointDist& dist, std::vector<std::pair<std::size_t, double>> transitions, std::function<void(std::string,std::string)> status_callback) {
     if(transitions.empty()) {
-        std::cout << "Successp_op: No transitions have been chosen." << std::endl;
+        std::cout << "SuccessStoch_op: No transitions have been chosen." << std::endl;
         return;
     }
 
@@ -362,7 +362,7 @@ void fire_with_probabilityStoch_on_joint_dist(CN& cn, JointDist& dist, std::vect
         if(check_pre_condition(transition, cn.m)) valid_transitions.push_back(i_transition);
     }
     if(valid_transitions.empty()) {
-        std::cout << "Successp_op: None of the transitions can be fired." << std::endl;
+        std::cout << "SuccessStoch_op: None of the transitions can be fired." << std::endl;
         return;
     }
 
@@ -388,7 +388,7 @@ void fire_with_probabilityStoch_on_joint_dist(CN& cn, JointDist& dist, std::vect
     const auto& post_places = all_post_places;
     successStoch_op(pre_places, post_places, probabilities, dist);
     if(status_callback)
-        status_callback(std::string("successp_{")+ transitions_string +"}", std::string("successp"));
+        status_callback(std::string("successStoch_{")+ transitions_string +"}", std::string("successStoch"));
 
     if(valid_transitions.empty())
         return;

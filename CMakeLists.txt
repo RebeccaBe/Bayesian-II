@@ -184,6 +184,14 @@ add_executable(rt_joint_dist_uniform_p src/runtime_tests/main_joint_dist_uniform
 target_link_libraries(rt_joint_dist_uniform_p core_lib)
 target_link_libraries(rt_joint_dist_uniform_p Boost::regex Boost::filesystem)
 
+add_executable(rt_gbn_uniform_stoch src/runtime_tests/main_gbn_uniform_random_cnu_probabilityStoch.cpp)
+target_link_libraries(rt_gbn_uniform_stoch core_lib)
+target_link_libraries(rt_gbn_uniform_stoch Boost::regex Boost::filesystem)
+
+add_executable(rt_joint_dist_uniform_stoch src/runtime_tests/main_joint_dist_uniform_random_cnu_probabilityStoch.cpp)
+target_link_libraries(rt_joint_dist_uniform_stoch core_lib)
+target_link_libraries(rt_joint_dist_uniform_stoch Boost::regex Boost::filesystem)
+
 
 
 add_executable(tests src/main_tests.cpp ${TEST_FILES})

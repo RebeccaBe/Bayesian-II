@@ -194,6 +194,46 @@ TEST_CASE("CNU probability ops on joint dist and GBN should lead to same dist")
 	}
 }
 
+TEST_CASE("CNU stochastic ops on joint dist and GBN should lead to same dist")
+{
+    std::size_t n_places = 22;
+    std::size_t n_transitions = 5;
+    std::size_t n_min_tokens = 5;
+    std::size_t n_max_tokens = 5;
+    std::size_t n_min_pre_places = 1;
+    std::size_t n_max_pre_places = 1;
+    std::size_t n_min_post_places = 1;
+    std::size_t n_max_post_places = 1;
+
+    std::size_t n_simplification_steps = 1;
+    std::size_t n_random_transitions_per_simplify = 2;
+
+    std::random_device rd;
+    std::mt19937 mt(rd());
+
+    auto cn = randomize_cn(n_places, n_transitions, n_min_tokens, n_max_tokens, n_min_pre_places, n_max_pre_places, n_min_post_places, n_max_post_places, mt);
+    auto cn_copy = cn;
+
+    auto gbn = build_uniform_independent_obn(n_places);
+    auto joint_dist = build_uniform_joint_dist(n_places);
+    auto rand_transition_helper = RandomTransitionHelper(cn, RandomTransitionHelper::PROBABILITY, 1, 2);
+
+    for(std::size_t i_simplification_step = 0; i_simplification_step < n_simplification_steps; i_simplification_step++)
+    {
+        for(std::size_t i_rand_transition = 0; i_rand_transition < n_random_transitions_per_simplify; i_rand_transition++)
+        {
+            auto i_transition = rand_transition_helper.next_p(mt);
+            fire_with_probabilityStoch_on_gbn(cn, gbn, i_transition);
+            fire_with_probabilityStoch_on_joint_dist(cn_copy, joint_dist, i_transition);
+        }
+        check_gbn_integrity(gbn);
+        simplification(gbn);
+        check_gbn_integrity(gbn);
+        auto p_m = evaluate(gbn);
+        test_joint_dist_matrix_equal(joint_dist, *p_m);
+    }
+}
+
 TEST_CASE("Preprocessing for the stochastical success should work") {
     BitVec x;
     x.set(0);
