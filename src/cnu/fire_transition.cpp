@@ -81,9 +81,9 @@ void fire_transition_on_joint_dist(CN& cn, JointDist& dist, std::size_t i_transi
 		cn.m[p] = 1;
 }
 
-void fire_with_probability_on_gbn (CN& cn, GBN& gbn, std::vector<std::pair<std::size_t, double>> transitions, std::function<void(std::string,std::string)> status_callback) {
+void fire_with_probability_on_gbn (CN& cn, GBN& gbn, std::vector<std::pair<std::size_t, double>> transitions, std::size_t chosen_transition, std::function<void(std::string,std::string)> status_callback) {
     if(transitions.empty()) {
-        std::cout << "Successp_op: No transitions have been chosen." << std::endl;
+        std::cout << "successp: No transitions have been chosen." << std::endl;
         return;
     }
 
@@ -93,7 +93,7 @@ void fire_with_probability_on_gbn (CN& cn, GBN& gbn, std::vector<std::pair<std::
         if(check_pre_condition(transition, cn.m)) valid_transitions.push_back(i_transition);
     }
     if(valid_transitions.empty()) {
-        std::cout << "Successp_op: None of the transitions can be fired." << std::endl;
+        std::cout << "successp: None of the transitions can be fired." << std::endl;
         return;
     }
 
@@ -157,33 +157,34 @@ void fire_with_probability_on_gbn (CN& cn, GBN& gbn, std::vector<std::pair<std::
         return;
 
 	// update marking in CNU
-	std::random_device rd;
-	std::mt19937 mt(rd());
+	if(!valid_transitions.empty()){
+	    /*std::random_device rd;
+        std::mt19937 mt(rd());
 
-	double normalization = 0;
-	for(auto t : valid_transitions) normalization += t.second;
+        double normalization = 0;
+        for(auto t : valid_transitions) normalization += t.second;
 
-	std::uniform_real_distribution<double> rand_transition_0_1(0, 1);
-	auto chosen_transition_p = rand_transition_0_1(mt);
+        std::uniform_real_distribution<double> rand_transition_0_1(0, 1);
+        auto chosen_transition_p = rand_transition_0_1(mt);
 
-	double sum = 0;
-	std::size_t index = 0;
-	while(sum <= chosen_transition_p) {
-        sum += (probabilities[index] / normalization);
-		index++;
+        double sum = 0;
+        std::size_t index = 0;
+        while(sum <= chosen_transition_p) {
+            sum += (probabilities[index] / normalization);
+            index++;
+        }*/
+
+        const auto& transition = cn.transitions[chosen_transition];
+        for(const auto& p : transition.pre)
+            cn.m.at(p) = 0;
+        for(const auto& p : transition.post)
+            cn.m.at(p) = 1;
 	}
-
-	const auto& transition = cn.transitions[transitions[index-1].first];
-	for(const auto& p : transition.pre)
-		cn.m.at(p) = 0;
-	for(const auto& p : transition.post)
-		cn.m.at(p) = 1;
-
 }
 
-void fire_with_probability_on_joint_dist(CN& cn, JointDist& dist, std::vector<std::pair<std::size_t, double>> transitions, std::function<void(std::string,std::string)> status_callback) {
+void fire_with_probability_on_joint_dist(CN& cn, JointDist& dist, std::vector<std::pair<std::size_t, double>> transitions, std::size_t chosen_transition, std::function<void(std::string,std::string)> status_callback) {
     if(transitions.empty()) {
-        std::cout << "Successp_op: No transitions have been chosen." << std::endl;
+        std::cout << "successp: No transitions have been chosen." << std::endl;
         return;
     }
 
@@ -193,7 +194,7 @@ void fire_with_probability_on_joint_dist(CN& cn, JointDist& dist, std::vector<st
         if(check_pre_condition(transition, cn.m)) valid_transitions.push_back(i_transition);
     }
     if(valid_transitions.empty()) {
-        std::cout << "Successp_op: None of the transitions can be fired." << std::endl;
+        std::cout << "successp: None of the transitions can be fired." << std::endl;
         return;
     }
 
@@ -226,7 +227,7 @@ void fire_with_probability_on_joint_dist(CN& cn, JointDist& dist, std::vector<st
 
 	// update marking in CNU
     if(!valid_transitions.empty()) {
-        std::random_device rd;
+        /*std::random_device rd;
         std::mt19937 mt(rd());
 
         double normalization = 0;
@@ -238,11 +239,11 @@ void fire_with_probability_on_joint_dist(CN& cn, JointDist& dist, std::vector<st
         double sum = 0;
         std::size_t index = 0;
         while (sum <= chosen_transition_p) {
-            sum += (probabilities[index] / normalization);
+            sum += (valid_transitions[index].second / normalization);
             index++;
-        }
+        }*/
 
-        const auto &transition = cn.transitions[transitions[index - 1].first];
+        const auto &transition = cn.transitions[chosen_transition];
         for (const auto &p : transition.pre)
             cn.m.at(p) = 0;
         for (const auto &p : transition.post)
@@ -250,7 +251,7 @@ void fire_with_probability_on_joint_dist(CN& cn, JointDist& dist, std::vector<st
     }
 }
 
-void fire_with_probabilityStoch_on_gbn (CN& cn, GBN& gbn, std::vector<std::pair<std::size_t, double>> transitions, std::function<void(std::string,std::string)> status_callback) {
+void fire_with_probabilityStoch_on_gbn (CN& cn, GBN& gbn, std::vector<std::pair<std::size_t, double>> transitions, std::size_t chosen_transition, std::function<void(std::string,std::string)> status_callback) {
     if(transitions.empty()) {
         std::cout << "SuccessStoch_op: No transitions have been chosen." << std::endl;
         return;
@@ -326,31 +327,35 @@ void fire_with_probabilityStoch_on_gbn (CN& cn, GBN& gbn, std::vector<std::pair<
         return;
 
     // update marking in CNU
-    std::random_device rd;
-    std::mt19937 mt(rd());
+    if(!valid_transitions.empty()) {
+       /* std::random_device rd;
+        std::mt19937 mt(rd());
 
-    double normalization = 0;
-    for(auto t : valid_transitions) normalization += t.second;
+        double normalization = 0;
+        for (auto t : valid_transitions) normalization += t.second;
 
-    std::uniform_real_distribution<double> rand_transition_0_1(0, 1);
-    auto chosen_transition_p = rand_transition_0_1(mt);
+        std::uniform_real_distribution<double> rand_transition_0_1(0, 1);
+        auto chosen_transition_p = rand_transition_0_1(mt);
 
-    double sum = 0;
-    std::size_t index = 0;
-    while(sum <= chosen_transition_p) {
-        sum += (probabilities[index] / normalization);
-        index++;
+        double sum = 0;
+        std::size_t index = 0;
+        while (sum <= chosen_transition_p) {
+            sum += (valid_transitions[index].second / normalization);
+            index++;
+        }*/
+
+        if(status_callback)
+            status_callback(std::string("chosen transition: t")+ std::to_string(chosen_transition), std::string("successp"));
+
+        const auto &transition = cn.transitions[chosen_transition];
+        for (const auto &p : transition.pre)
+            cn.m.at(p) = 0;
+        for (const auto &p : transition.post)
+            cn.m.at(p) = 1;
     }
-
-    const auto& transition = cn.transitions[transitions[index-1].first];
-    for(const auto& p : transition.pre)
-        cn.m.at(p) = 0;
-    for(const auto& p : transition.post)
-        cn.m.at(p) = 1;
-
 }
 
-void fire_with_probabilityStoch_on_joint_dist(CN& cn, JointDist& dist, std::vector<std::pair<std::size_t, double>> transitions, std::function<void(std::string,std::string)> status_callback) {
+void fire_with_probabilityStoch_on_joint_dist(CN& cn, JointDist& dist, std::vector<std::pair<std::size_t, double>> transitions, std::size_t chosen_transition, std::function<void(std::string,std::string)> status_callback) {
     if(transitions.empty()) {
         std::cout << "SuccessStoch_op: No transitions have been chosen." << std::endl;
         return;
@@ -395,7 +400,7 @@ void fire_with_probabilityStoch_on_joint_dist(CN& cn, JointDist& dist, std::vect
 
     // update marking in CNU
     if(!valid_transitions.empty()) {
-        std::random_device rd;
+        /*std::random_device rd;
         std::mt19937 mt(rd());
 
         double normalization = 0;
@@ -407,11 +412,14 @@ void fire_with_probabilityStoch_on_joint_dist(CN& cn, JointDist& dist, std::vect
         double sum = 0;
         std::size_t index = 0;
         while (sum <= chosen_transition_p) {
-            sum += (probabilities[index] / normalization);
+            sum += (valid_transitions[index].second / normalization);
             index++;
-        }
+        }*/
 
-        const auto &transition = cn.transitions[transitions[index - 1].first];
+        if(status_callback)
+            status_callback(std::string("chosen transition: t")+ std::to_string(chosen_transition), std::string("successp"));
+
+        const auto &transition = cn.transitions[chosen_transition];
         for (const auto &p : transition.pre)
             cn.m.at(p) = 0;
         for (const auto &p : transition.post)

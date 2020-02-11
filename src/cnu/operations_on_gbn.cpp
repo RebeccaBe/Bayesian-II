@@ -315,7 +315,7 @@ void successStoch_op(const std::vector<std::vector<std::size_t>> pre_places, con
             involved_wires_post.push_back(mapping_place_key.at(post));
         }
 
-        double probability_norm = p/normalization_factor(assignmentY, mapping_place_key, new_pre_places, new_probabilities);
+        double probability_norm = p;
         matrix->add(assignmentX,assignmentY,probability_norm);
 
         std::size_t y_wire = 0;
@@ -337,14 +337,14 @@ void successStoch_op(const std::vector<std::vector<std::size_t>> pre_places, con
                     else
                         assignmentX[x_wire]=assignmentY[x_wire]; //non-involved wires don't change, hence X=Y
                 }
-                double probability_norm = p/normalization_factor(assignmentY, mapping_place_key, new_pre_places, new_probabilities);
+                double probability_norm = p;
                 matrix->add(assignmentX,assignmentY,probability_norm);
                 y_wire = 0;
             }
         }
     }
 
-    //normalize_matrix_rows(*matrix);
+    normalize_matrix_cols(*matrix);
 
     auto& g = gbn.graph;
     auto& output_vertices = ::output_vertices(gbn);
@@ -371,21 +371,24 @@ void successStoch_op(const std::vector<std::vector<std::size_t>> pre_places, con
     }
 }
 
-double normalization_factor(BitVec assignmentY, std::map<std::size_t, std::size_t> mapping_place_key,
-        const std::vector<std::vector<std::size_t>> pre_places, const std::vector<double> probabilities) {
-    double normalization = 0;
-    for(std::size_t i = 0; i < probabilities.size(); i++) {
-        bool valid = 1;
-        for(auto place : pre_places[i]) {
-            if(!assignmentY.test(mapping_place_key[place])) {
-                valid = 0;
-                break; //efficiency measure
+void normalize_matrix_cols(Matrix& matrix) {
+    unsigned long long i_max_row = 1;
+    unsigned long long i_max_col = 1;
+    i_max_col = i_max_col << matrix.n;
+    i_max_row = i_max_row << matrix.m;
+
+    for(unsigned long long i_col = 0; i_col < i_max_col; i_col++) {
+        double col_sum = 0;
+        for(unsigned long long i_row = 0; i_row < i_max_row; i_row++)
+            col_sum += matrix.get(i_row, i_col);
+
+        if (col_sum > 0)
+            for(unsigned long long i_row = 0; i_row < i_max_row; i_row++) {
+                double old_val = matrix.get(i_row, i_col);
+                if(old_val > 0)
+                    matrix.set(i_row, i_col, old_val / col_sum);
             }
-        }
-        if (valid)
-            normalization += probabilities[i];
     }
-    return (normalization > 0)? normalization : 1;
 }
 
 void normalize_matrix_rows(Matrix& matrix) {

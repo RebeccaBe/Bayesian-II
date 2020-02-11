@@ -105,9 +105,10 @@ int main(int argc, const char** argv)
 				if(is_detailed)
 					std::cout << "i_fire: " << i_fire << std::endl;
 				auto i_transition = rand_transition_helper.next_p(mt);
+                auto chosen_transition = rand_transition_helper.choose_transition(cn, i_transition);
 
 				auto callback = (is_detailed) ? [&operation](std::string high_level, std::string low_level) { std::cout << high_level << " " << low_level << std::endl; } : std::function<void(std::string,std::string)>();
-				fire_with_probabilityStoch_on_joint_dist(cn, joint_dist, i_transition, callback);
+				fire_with_probabilityStoch_on_joint_dist(cn, joint_dist, i_transition, chosen_transition, callback);
 
 			}
             auto end_time_gbn = std::chrono::steady_clock::now();

@@ -30,5 +30,6 @@ struct RandomTransitionHelper
 
 	std::size_t next(std::mt19937& mt);
 	std::vector<std::pair<std::size_t, double>> next_p(std::mt19937& mt);
+    std::size_t choose_transition (CN& cn, std::vector<std::pair<std::size_t, double>> transitions_w_probabilities);
 
-};
+    };

@@ -79,3 +79,33 @@ std::vector<std::pair<std::size_t, double>> RandomTransitionHelper::next_p(std::
 
 	return transitions_w_probabilities;
 }
+
+std::size_t RandomTransitionHelper::choose_transition (CN& cn, std::vector<std::pair<std::size_t, double>> transitions_w_probabilities) {
+
+    std::vector<std::pair<std::size_t, double>> valid_transitions;
+    for(auto i_transition : transitions_w_probabilities) {
+        const auto& transition = cn.transitions[i_transition.first];
+        if(check_pre_condition(transition, cn.m)) valid_transitions.push_back(i_transition);
+    }
+
+    if(valid_transitions.empty())
+        return cn.transitions.size(); //No valid transition
+
+    std::random_device rd;
+    std::mt19937 mt(rd());
+
+    double normalization = 0;
+    for (auto t : valid_transitions) normalization += t.second;
+
+    std::uniform_real_distribution<double> rand_transition_0_1(0, 1);
+    auto chosen_transition_p = rand_transition_0_1(mt);
+
+    double sum = 0;
+    std::size_t index = 0;
+    while (sum <= chosen_transition_p) {
+        sum += (valid_transitions[index].second / normalization);
+        index++;
+    }
+
+    return valid_transitions[index-1].first;
+}

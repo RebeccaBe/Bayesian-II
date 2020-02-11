@@ -25,7 +25,7 @@ TEST_CASE("seven_nodes.gbn: (StochWithoutOutputs) v_4")
 TEST_CASE("seven_nodes.gbn: (StochWithoutOutputs) all vertices")
 {
 	auto gbn = read_and_check_gbn(TEST_INSTANCE_FOLDER + "seven_nodes.gbn");
-	check_evaluates_equal_after_operation(gbn, [](GBN gbn) -> GBN { 
+	check_evaluates_equal_after_operation(gbn, [](GBN gbn) -> GBN {
 		apply_simplifications_for_each_vertex(gbn, std::function<void(const GBN&, std::string)>(), eliminate_stochastic_vertex_without_outputs);
 		return gbn; 
 	}

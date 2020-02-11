@@ -3,6 +3,7 @@
 #include "../cn/cn.h"
 #include "../cn/cn_io.h"
 #include "../helpers.hpp"
+#include "../joint_dist/joint_dist_io.h"
 
 namespace {
 	std::vector<bool> build_target_marking(const std::vector<bool>& m, std::vector<std::size_t> places, bool b)
@@ -31,7 +32,7 @@ void set_op(const std::vector<std::size_t> places, bool b, JointDist& dist)
 	for(auto& [marking,p] : dist)
 	{
 		auto target = build_target_marking(marking, places, b);
-		if(target != marking) //Why? Post Places can be empty anyway...
+		if(target != marking || places.empty()) //Why? Post Places can be empty anyway...
 		{
 			dist[target] += p;
 			p = 0;
@@ -134,7 +135,7 @@ void successp_op(const std::vector<std::vector<std::size_t>> pre_places, const s
 		set_op(pre_places[i], 0, worker_dist);
 		set_op(post_places[i], 1, worker_dist);
 
-		for (auto& [marking,p] : dist) p += (worker_dist.at(marking) * probability);
+        for (auto& [marking,p] : dist) p += (worker_dist.at(marking) * probability);
 	}
 
 	normalize_op(dist);
@@ -170,8 +171,7 @@ void successStoch_op(const std::vector<std::vector<std::size_t>> pre_places, con
 
         for(auto [marking,p] : worker_dist) {
             auto target = build_target_marking(marking, post_places[i], 1);
-            //if (target != marking) I think, I have to just omit this and it will work...
-                for (auto el : map_pre[marking]) map_post[target].push_back(el);
+            for (auto el : map_pre[marking]) map_post[target].push_back(el);
         }
 
         for (auto& [marking,p] : dist) {

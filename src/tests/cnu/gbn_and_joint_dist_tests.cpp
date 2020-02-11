@@ -6,6 +6,7 @@
 #include "../../gbn/general/gbn.h"
 #include "../../gbn/general/special_cases.h"
 #include "../../gbn/evaluation/evaluation.h"
+#include "../../gbn/simplification/global_simplification.h"
 #include "../../joint_dist/joint_dist.h"
 #include "../../joint_dist/special_cases.h"
 #include "../../joint_dist/joint_dist_io.h"
@@ -85,8 +86,8 @@ TEST_CASE("paper_example.cnu: CNU probability ops on joint dist and GBN should l
 	std::ifstream f_gbn(TEST_INSTANCE_FOLDER + "paper_example.gbn");
 	auto gbn = read_gbn(f_gbn);
 
-    fire_with_probability_on_gbn(cn, gbn, {{2, 0.75},{1, 0.25}});
-	fire_with_probability_on_joint_dist(cn_copy, dist, {{2, 0.75},{1, 0.25}});
+    fire_with_probability_on_gbn(cn, gbn, {{2, 0.75},{1, 0.25}}, 2);
+	fire_with_probability_on_joint_dist(cn_copy, dist, {{2, 0.75},{1, 0.25}}, 2);
 
 	simplification(gbn);
 	auto p_m = evaluate(gbn);
@@ -105,8 +106,8 @@ TEST_CASE("paper_example.cnu: CNU stochastic ops on joint dist and GBN should le
     std::ifstream f_gbn(TEST_INSTANCE_FOLDER + "paper_example.gbn");
     auto gbn = read_gbn(f_gbn);
 
-    fire_with_probabilityStoch_on_gbn(cn, gbn, {{2, 0.5},{1, 0.2}, {0, 0.3}});
-    fire_with_probabilityStoch_on_joint_dist(cn_copy, dist, {{2, 0.5},{1, 0.2}, {0, 0.3}});
+    fire_with_probabilityStoch_on_gbn(cn, gbn, {{2, 0.5},{1, 0.2}, {0, 0.3}}, 2);
+    fire_with_probabilityStoch_on_joint_dist(cn_copy, dist, {{2, 0.5},{1, 0.2}, {0, 0.3}}, 2);
 
     simplification(gbn);
     auto p_m = evaluate(gbn);
@@ -183,8 +184,9 @@ TEST_CASE("CNU probability ops on joint dist and GBN should lead to same dist")
 		for(std::size_t i_rand_transition = 0; i_rand_transition < n_random_transitions_per_simplify; i_rand_transition++)
 		{
 			auto i_transition = rand_transition_helper.next_p(mt);
-			fire_with_probability_on_gbn(cn, gbn, i_transition);
-			fire_with_probability_on_joint_dist(cn_copy, joint_dist, i_transition);
+			auto chosen_transition = rand_transition_helper.choose_transition(cn, i_transition);
+			fire_with_probability_on_gbn(cn, gbn, i_transition, chosen_transition);
+			fire_with_probability_on_joint_dist(cn_copy, joint_dist, i_transition, chosen_transition);
 		}
 		check_gbn_integrity(gbn);
 		simplification(gbn);
@@ -196,7 +198,7 @@ TEST_CASE("CNU probability ops on joint dist and GBN should lead to same dist")
 
 TEST_CASE("CNU stochastic ops on joint dist and GBN should lead to same dist")
 {
-    std::size_t n_places = 22;
+    std::size_t n_places = 10;
     std::size_t n_transitions = 5;
     std::size_t n_min_tokens = 5;
     std::size_t n_max_tokens = 5;
@@ -205,8 +207,8 @@ TEST_CASE("CNU stochastic ops on joint dist and GBN should lead to same dist")
     std::size_t n_min_post_places = 1;
     std::size_t n_max_post_places = 1;
 
-    std::size_t n_simplification_steps = 1;
-    std::size_t n_random_transitions_per_simplify = 2;
+    std::size_t n_simplification_steps = 5;
+    std::size_t n_random_transitions_per_simplify = 10;
 
     std::random_device rd;
     std::mt19937 mt(rd());
@@ -223,8 +225,10 @@ TEST_CASE("CNU stochastic ops on joint dist and GBN should lead to same dist")
         for(std::size_t i_rand_transition = 0; i_rand_transition < n_random_transitions_per_simplify; i_rand_transition++)
         {
             auto i_transition = rand_transition_helper.next_p(mt);
-            fire_with_probabilityStoch_on_gbn(cn, gbn, i_transition);
-            fire_with_probabilityStoch_on_joint_dist(cn_copy, joint_dist, i_transition);
+            auto chosen_transition = rand_transition_helper.choose_transition(cn, i_transition);
+
+            fire_with_probabilityStoch_on_gbn(cn, gbn, i_transition, chosen_transition);
+            fire_with_probabilityStoch_on_joint_dist(cn_copy, joint_dist, i_transition, chosen_transition);
         }
         check_gbn_integrity(gbn);
         simplification(gbn);
@@ -234,34 +238,10 @@ TEST_CASE("CNU stochastic ops on joint dist and GBN should lead to same dist")
     }
 }
 
-TEST_CASE("Preprocessing for the stochastical success should work") {
-    BitVec x;
-    x.set(0);
-    x.set(1);
-    std::vector<std::vector<std::size_t>> places;
-    std::vector<double> probs;
-    probs.push_back(0.2);
-    probs.push_back(0.3);
-    places.push_back({1,2});
-    places.push_back({1,2,3});
-
-    std::set<std::size_t> all_places;
-    for(auto pre : places)
-        all_places.insert(pre.begin(), pre.end());
-    std::map<std::size_t, std::size_t> mapping_place_key; //maps which place has which wire position
-    std::size_t index = 0;
-    for(auto place : all_places) {
-        mapping_place_key.insert(std::pair<std::size_t, std::size_t>(place, index));
-        index++;
-    }
-    auto norm = normalization_factor(x, mapping_place_key, places, probs);
-    assert(norm == 0.2);
-}
-
-TEST_CASE("Normalizing matrices by rows should work") {
-    auto p_matrix = read_matrix({ "dynamic 1 1 [0.2,0.2;0,0]" });
+TEST_CASE("Normalizing matrices by columns should work") {
+    auto p_matrix = read_matrix({ "dynamic 1 1 [0.2,0;0.2,0]" });
 
     REQUIRE(p_matrix->get(BitVec("0"), BitVec("0")) == 0.2);
-    normalize_matrix_rows(*p_matrix);
+    normalize_matrix_cols(*p_matrix);
     REQUIRE(p_matrix->get(BitVec("0"), BitVec("0")) == 0.5);
 }
