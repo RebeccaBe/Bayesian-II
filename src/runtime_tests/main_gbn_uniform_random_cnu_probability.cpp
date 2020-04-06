@@ -106,10 +106,11 @@ int main(int argc, const char** argv)
 				if(is_detailed)
 					std::cout << "i_fire: " << i_fire << std::endl;
 				auto i_transition = rand_transition_helper.next_p(mt);
+                auto chosen_transition = rand_transition_helper.choose_transition(cn, i_transition);
 
 				auto callback = (is_detailed) ? [&operation](std::string high_level, std::string low_level) { std::cout << high_level << " " << low_level << std::endl; } : std::function<void(std::string,std::string)>();
                 auto callback_simplification = (is_detailed) ? [&operations](const GBN& gbn,std::string op) { operations[op]++; std::cout << op << std::endl;} : std::function<void(const GBN&,std::string)>();
-				fire_with_probability_on_gbn(cn, gbn, i_transition, callback);
+				fire_with_probability_on_gbn(cn, gbn, i_transition, chosen_transition, callback);
 
 				simplification(gbn, callback_simplification);
 

@@ -80,6 +80,8 @@ std::vector<std::pair<std::size_t, double>> RandomTransitionHelper::next_p(std::
 	return transitions_w_probabilities;
 }
 
+// This is only needed for correct testing. If we would not choose the transition beforehand, maybe different ones would be chosen for
+// the same test and therefore, the resulting joint distributions could not be compared to each other.
 std::size_t RandomTransitionHelper::choose_transition (CN& cn, std::vector<std::pair<std::size_t, double>> transitions_w_probabilities) {
 
     std::vector<std::pair<std::size_t, double>> valid_transitions;

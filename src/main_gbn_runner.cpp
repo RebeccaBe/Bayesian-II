@@ -17,6 +17,7 @@
 #include <functional>
 #include "../libs/cxxopts/include/cxxopts.hpp"
 #include "cnu/fire_transition.h"
+#include "runtime_tests/helpers/random_transition_helper.h"
 
 // globals (naughty, naughty, ...)
 bool is_step_wise_output = false;
@@ -100,6 +101,15 @@ void do_command(std::string command_line, CN& cn, GBN& gbn, std::function<void(U
         return;
     }
 
+    if(command_line.substr(0,5) == "stoch")
+    {
+        std::cout << "Insert the probability distribution over the transitions as follows: (t0, 2/10) (t1, 3/10) ..." << std::endl
+                  << "Note that unmentioned transitions are assigned a probability of 0" << std::endl;
+
+        execute_probabilistic_transition(cn, gbn);
+        return;
+    }
+
 	std::cout << "Command '" << command_line << "' could not be parsed." << std::endl;
 }
 
@@ -125,7 +135,7 @@ void execute_probabilistic_transition(CN &cn, GBN &gbn) {
             std::size_t i_transition = std::stoi(single_transition_strs[0].substr(2));
 
             if(is_in(i_transition, used_transitions)) {
-                std::cout << "Some transitions were mentioned multiple times, please try again. Please try again. To quit, please type 'exit'." << std::endl;
+                std::cout << "Some transitions were mentioned multiple times, please try again. To quit, please type 'exit'." << std::endl;
                 execute_probabilistic_transition(cn, gbn);
             }
 
@@ -133,7 +143,41 @@ void execute_probabilistic_transition(CN &cn, GBN &gbn) {
             used_transitions.push_back(i_transition);
         }
 
-        double sum = 0;
+        std::cout << "You can now either specify a transition that gets fired from the available transitions or choose the randomize option by typing 'r'." << std::endl;
+        std::cout << "These are the available transitions: ";
+        std::vector<std::size_t> valid_transitions;
+        for(auto i_transition : transitions_w_probabilities) {
+            const auto& transition = cn.transitions[i_transition.first];
+            if(check_pre_condition(transition, cn.m)) valid_transitions.push_back(i_transition.first);
+        }
+        if(valid_transitions.empty()) {
+            std::cout << "There are no valid transitions in the given set. Please try again. To quit, please type 'exit'." << std::endl;
+            execute_probabilistic_transition(cn, gbn);
+        }
+        for(auto i_transition : valid_transitions) std::cout << "t" << i_transition << " ";
+        std::cout << std::endl << "If you choose a transition that is not in this list, the randomized option will get executed automatically." << std::endl;
+        std::string line2;
+        std::getline(std::cin, line2);
+        std::size_t chosen_transition = 0;
+        if (line2[0] == 't'){
+            std::vector<std::string> split_line;
+            boost::split(split_line,line2,boost::is_any_of(" "));
+            std::size_t transition = std::stoi(split_line[0].substr(1));
+            if (is_in(transition, valid_transitions)) {
+                chosen_transition = transition;
+            } else {
+                auto rand_transition_helper = RandomTransitionHelper(cn, RandomTransitionHelper::PROBABILITY, 1, 0);
+                chosen_transition = rand_transition_helper.choose_transition(cn, transitions_w_probabilities);
+            }
+        } else if(line2[0] == 'r') {
+            auto rand_transition_helper = RandomTransitionHelper(cn, RandomTransitionHelper::PROBABILITY, 1, 0);
+            chosen_transition = rand_transition_helper.choose_transition(cn, transitions_w_probabilities);
+        } else {
+            std::cout << "Command was not understood, please try again. To quit, please type 'exit'." << std::endl;
+            execute_probabilistic_transition(cn, gbn);
+        }
+
+            double sum = 0;
         for (auto t : transitions_w_probabilities) sum += t.second;
         if(sum-1 > 0.001 || 1-sum > 0.001) {
             std::cout << "Probabilities do not add up to 1. Instead the sum equals " << std::to_string(sum)
@@ -144,12 +188,96 @@ void execute_probabilistic_transition(CN &cn, GBN &gbn) {
         std::string operation;
         auto callback = [&operation](std::string high_level, std::string low_level) { std::cout << high_level << " " << low_level << std::endl; };
 
-        fire_with_probability_on_gbn(cn, gbn, transitions_w_probabilities, callback);
+        fire_with_probability_on_gbn(cn, gbn, transitions_w_probabilities, chosen_transition, callback);
     }
     else if (line.substr(0,3) == "exit") return;
     else {
         std::cout<<"Incorrect syntax, please try again. To quit, please type 'exit'." << std::endl;
         execute_probabilistic_transition(cn, gbn);
+    }
+}
+
+void execute_stochastic_transition(CN &cn, GBN &gbn) {
+    std::string line;
+    std::getline(std::cin, line);
+    std::regex regex("^(\\(t([0-9]+), ?([0-9]+)(\\/([0-9])+)?\\) ?)+", std::regex_constants::icase);
+    std::smatch matches;
+    if(std::regex_match(line, matches, regex)) {
+        std::vector<std::pair<std::size_t, double>> transitions_w_probabilities;
+        std::vector<std::size_t> used_transitions;
+
+        std::vector<std::string> transitions_strs;
+        boost::split(transitions_strs, line, boost::is_any_of(")"));
+        transitions_strs.erase(transitions_strs.end());
+
+        for(auto transitions_str : transitions_strs) {
+            std::vector<std::string> single_transition_strs;
+            boost::trim(transitions_str);
+
+            boost::split(single_transition_strs, transitions_str, boost::is_any_of(","));
+            for(auto val_str : single_transition_strs) boost::trim(val_str);
+            std::size_t i_transition = std::stoi(single_transition_strs[0].substr(2));
+
+            if(is_in(i_transition, used_transitions)) {
+                std::cout << "Some transitions were mentioned multiple times, please try again. To quit, please type 'exit'." << std::endl;
+                execute_stochastic_transition(cn, gbn);
+            }
+
+            transitions_w_probabilities.emplace_back(i_transition, read_double(single_transition_strs[1]));
+            used_transitions.push_back(i_transition);
+        }
+
+        std::cout << "You can now either specify a transition that gets fired from the available transitions or choose the randomize option by typing 'r'." << std::endl;
+        std::cout << "These are the available transitions: ";
+        std::vector<std::size_t> valid_transitions;
+        for(auto i_transition : transitions_w_probabilities) {
+            const auto& transition = cn.transitions[i_transition.first];
+            if(check_pre_condition(transition, cn.m)) valid_transitions.push_back(i_transition.first);
+        }
+        if(valid_transitions.empty()) {
+            std::cout << "There are no valid transitions in the given set. Please try again. To quit, please type 'exit'." << std::endl;
+            execute_stochastic_transition(cn, gbn);
+        }
+        for(auto i_transition : valid_transitions) std::cout << "t" << i_transition << " ";
+        std::cout << std::endl << "If you choose a transition that is not in this list, the randomized option will get executed automatically." << std::endl;
+        std::string line2;
+        std::getline(std::cin, line2);
+        std::size_t chosen_transition = 0;
+        if (line2[0] == 't'){
+            std::vector<std::string> split_line;
+            boost::split(split_line,line2,boost::is_any_of(" "));
+            std::size_t transition = std::stoi(split_line[0].substr(1));
+            if (is_in(transition, valid_transitions)) {
+                chosen_transition = transition;
+            } else {
+                auto rand_transition_helper = RandomTransitionHelper(cn, RandomTransitionHelper::PROBABILITY, 1, 0);
+                chosen_transition = rand_transition_helper.choose_transition(cn, transitions_w_probabilities);
+            }
+        } else if(line2[0] == 'r') {
+            auto rand_transition_helper = RandomTransitionHelper(cn, RandomTransitionHelper::PROBABILITY, 1, 0);
+            chosen_transition = rand_transition_helper.choose_transition(cn, transitions_w_probabilities);
+        } else {
+            std::cout << "Command was not understood, please try again. To quit, please type 'exit'." << std::endl;
+            execute_stochastic_transition(cn, gbn);
+        }
+
+        double sum = 0;
+        for (auto t : transitions_w_probabilities) sum += t.second;
+        if(sum-1 > 0.001 || 1-sum > 0.001) {
+            std::cout << "Probabilities do not add up to 1. Instead the sum equals " << std::to_string(sum)
+                      << ". Please try again. To quit, please type 'exit'.";
+            execute_stochastic_transition(cn, gbn);
+        }
+
+        std::string operation;
+        auto callback = [&operation](std::string high_level, std::string low_level) { std::cout << high_level << " " << low_level << std::endl; };
+
+        fire_with_probabilityStoch_on_gbn(cn, gbn, transitions_w_probabilities, chosen_transition, callback);
+    }
+    else if (line.substr(0,3) == "exit") return;
+    else {
+        std::cout<<"Incorrect syntax, please try again. To quit, please type 'exit'." << std::endl;
+        execute_stochastic_transition(cn, gbn);
     }
 }
 
