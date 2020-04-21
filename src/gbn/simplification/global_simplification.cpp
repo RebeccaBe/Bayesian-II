@@ -37,7 +37,10 @@ bool eliminate_stochastic_vertex_without_outputs(GBN& gbn, Vertex v, std::string
 
 		has_sucessors = successors.size() > 1;
 		if(has_sucessors) {
-			successors = path_closing(gbn, successors);
+            //TODO: check predecessors of successors for efficiency purposes
+
+
+            successors = path_closing(gbn, successors);
 
 			auto v_new = merge_vertices(gbn, successors);
 

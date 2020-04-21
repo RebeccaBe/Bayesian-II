@@ -84,3 +84,5 @@ std::vector<Vertex> all_vertices(const GBN& gbn);
 std::vector<Vertex> inside_vertices(const GBN& gbn);
 const std::vector<Vertex>& input_vertices(const GBN& gbn);
 const std::vector<Vertex>& output_vertices(const GBN& gbn);
+
+std::size_t degree(const GBNGraph::vertex_descriptor& v, const GBNGraph& g);

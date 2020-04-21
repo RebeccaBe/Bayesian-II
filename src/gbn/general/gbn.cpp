@@ -99,3 +99,20 @@ const std::vector<Vertex>& output_vertices(const GBN& gbn)
 {
 	return gbn.output_vertices;
 }
+
+std::size_t degree(const GBNGraph::vertex_descriptor& v, const GBNGraph& g) {
+    std::size_t degree = 0;
+    std::vector<std::size_t> ports;
+
+    degree += boost::make_iterator_range(boost::in_edges(v,g)).size();
+
+    for(auto e : boost::make_iterator_range(boost::out_edges(v,g))) {
+        std::size_t port = port_from(e, g);
+        if(std::find(ports.cbegin(), ports.cend(), port) == ports.cend()) {
+            degree++;
+            ports.push_back(port);
+        }
+    }
+    return degree;
+}
+

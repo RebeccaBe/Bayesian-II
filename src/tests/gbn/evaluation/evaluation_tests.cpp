@@ -1,6 +1,7 @@
 #include "../../../../libs/catch/catch.hpp"
 
 #include <fstream>
+#include <chrono>
 
 #include "../../../gbn/evaluation/evaluation.h"
 #include "../../../gbn/matrix/matrix_io.h"
@@ -8,7 +9,13 @@
 #include "../../../gbn/general/gbn_io.h"
 #include "../../../gbn/general/subgbn.h"
 #include "../../../gbn/modification/merging.h"
+#include "../../../gbn/general/special_cases.h"
+#include "../../../cn/randomized_generation.h"
+
 #include "../../test_helpers.h"
+#include "../../../runtime_tests/helpers/random_transition_helper.h"
+#include "../../../cnu/fire_transition.h"
+#include "../../../gbn/simplification/simplification.h"
 
 
 TEST_CASE("Evaluation of single node should just give that matrix of node 1") 
@@ -190,4 +197,86 @@ TEST_CASE("The evaluation of F-Matrices should result into a diagonal matrix.") 
     auto gbn = read_and_check_gbn(TEST_INSTANCE_FOLDER + "f_matrices.gbn");
     auto p_m = evaluate(gbn);
     REQUIRE(p_m->type == DIAGONAL);
+}
+
+TEST_CASE("test") {
+    auto gbn = read_and_check_gbn(TEST_INSTANCE_FOLDER + "seven_nodes.gbn");
+
+    auto start_time = std::chrono::steady_clock::now();
+    auto p_m = evaluate_stepwise(gbn);
+    auto end_time = std::chrono::steady_clock::now();
+    double diff_milliseconds = std::chrono::duration<double, std::milli>(end_time-start_time).count();
+    std::cout << "New: " << diff_milliseconds << std::endl;
+
+    auto start_time2 = std::chrono::steady_clock::now();
+    auto p_m2 = evaluate(gbn);
+    auto end_time2 = std::chrono::steady_clock::now();
+    double diff_milliseconds2 = std::chrono::duration<double, std::milli>(end_time2-start_time2).count();
+    std::cout << "Old: " << diff_milliseconds2 << std::endl;
+
+
+}
+
+TEST_CASE("test1")
+{
+    std::size_t n_places = 20;
+    std::size_t n_transitions = 5;
+    std::size_t n_min_tokens = 5;
+    std::size_t n_max_tokens = 5;
+    std::size_t n_min_pre_places = 1;
+    std::size_t n_max_pre_places = 1;
+    std::size_t n_min_post_places = 1;
+    std::size_t n_max_post_places = 1;
+
+    std::size_t n_simplification_steps = 20;
+    std::size_t n_random_transitions_per_simplify = 1;
+
+    std::random_device rd;
+    std::mt19937 mt(rd());
+
+    auto cn = randomize_cn(n_places, n_transitions, n_min_tokens, n_max_tokens, n_min_pre_places, n_max_pre_places, n_min_post_places, n_max_post_places, mt);
+    auto cn_copy = cn;
+    std::vector<std::vector<std::pair<std::size_t, double>>> transitions_w_probabilities;
+    std::vector<std::size_t> chosen_transitions;
+
+    auto gbn = build_uniform_independent_obn(n_places);
+    auto gbn_copy = gbn;
+    auto rand_transition_helper = RandomTransitionHelper(cn, RandomTransitionHelper::PROBABILITY, 1, 2);
+
+    auto start_time1 = std::chrono::steady_clock::now();
+    for(std::size_t i_simplification_step = 0; i_simplification_step < n_simplification_steps; i_simplification_step++)
+    {
+        for(std::size_t i_rand_transition = 0; i_rand_transition < n_random_transitions_per_simplify; i_rand_transition++)
+        {
+            auto i_transition = rand_transition_helper.next_p(mt);
+            transitions_w_probabilities.push_back(i_transition);
+
+            auto chosen_transition = rand_transition_helper.choose_transition(cn, i_transition);
+            chosen_transitions.push_back(chosen_transition);
+
+            fire_with_probability_on_gbn(cn, gbn, i_transition, chosen_transition);
+        }
+        check_gbn_integrity(gbn);
+        simplification(gbn);
+        check_gbn_integrity(gbn);
+    }
+    auto p_m = evaluate(gbn);
+    auto end_time1 = std::chrono::steady_clock::now();
+    double diff_milliseconds1 = std::chrono::duration<double, std::milli>(end_time1-start_time1).count();
+    std::cout << "Old: " << diff_milliseconds1 << std::endl;
+
+    auto start_time = std::chrono::steady_clock::now();
+    for(std::size_t i_simplification_step = 0; i_simplification_step < n_simplification_steps; i_simplification_step++) {
+        for(std::size_t i_rand_transition = 0; i_rand_transition < n_random_transitions_per_simplify; i_rand_transition++) {
+            fire_with_probability_on_gbn(cn_copy, gbn_copy, transitions_w_probabilities.at(i_simplification_step), chosen_transitions.at(i_simplification_step));
+        }
+        check_gbn_integrity(gbn_copy);
+    }
+    auto p_m2 = evaluate_stepwise(gbn_copy);
+    auto end_time = std::chrono::steady_clock::now();
+    double diff_milliseconds = std::chrono::duration<double, std::milli>(end_time-start_time).count();
+    std::cout << "New: " << diff_milliseconds << std::endl;
+
+    //Not normalized!!
+    //test_matrices_equal(*p_m, *p_m2);
 }

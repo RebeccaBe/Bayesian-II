@@ -4,7 +4,6 @@
 #include "probability_bookkeeper.h"
 
 
-
 // returns which vertices have to be updated
 // if wire. active == false afterwards hints towards carry bit
 std::vector<Vertex> flip_wire(Wire &wire) {
@@ -110,6 +109,104 @@ MatrixPtr evaluate(const GBN &gbn) {
     }
 
     return m;
+}
+
+MatrixPtr evaluate_stepwise(const GBN &gbn) {
+    auto gbn_result = gbn;
+
+    bool changed = false;
+    do {
+        std::vector<Vertex> nodes;
+        auto &g = gbn_result.graph;
+
+        for (auto v : inside_vertices(gbn_result)) {
+
+            bool has_successors = false;
+            for (auto e : boost::make_iterator_range(boost::out_edges(v, g))) {
+                if (type(boost::target(e, g), g) != OUTPUT) {
+                    has_successors = true;
+                    break;
+                }
+            }
+
+            bool has_predecessors = false;
+            for (auto e : boost::make_iterator_range(boost::in_edges(v, g))){
+                if (type(boost::source(e, g), g) != INPUT) {
+                    has_predecessors = true;
+                    break;
+                }
+            }
+
+            if (has_predecessors || has_successors)
+                nodes.push_back(v);
+        }
+
+        if(!nodes.empty()) {
+            gbn_result  = node_elimination(gbn_result, nodes);
+            changed = true;
+        } else {
+            changed = false;
+            break;
+        }
+    }
+    while (changed);
+
+    auto vertices = inside_vertices(gbn_result);
+    if(vertices.size() > 1) {
+        return evaluate(gbn_result);
+    } else {
+        return matrix(vertices.at(0), gbn_result.graph);
+    }
+}
+
+GBN node_elimination (GBN& gbn, std::vector<Vertex> nodes) {
+    auto &g = gbn.graph;
+
+    std::size_t min_degree = degree(nodes.at(0), g);
+    std::size_t max_degree = 0;
+    Vertex min_degree_vertex = nodes.at(0);
+    for(auto v : nodes) {
+        auto v_degree = degree(v, g);
+        if(v_degree < min_degree) {
+            min_degree = v_degree;
+            min_degree_vertex = v;
+        }
+        if(v_degree > max_degree) {
+            max_degree = v_degree;
+        }
+    }
+
+    std::size_t min_degree_neighbor =  max_degree+1;
+    Vertex min_degree_neighbor_vertex = min_degree_vertex;
+    for(auto e : boost::make_iterator_range(boost::out_edges(min_degree_vertex, g))) {
+        auto successor = boost::target(e, g);
+        if(type(successor, g) == NODE) {
+            std::vector<Vertex> neighbors = {min_degree_vertex, successor};
+            auto path = path_closing(gbn, neighbors);
+
+            if(degree(successor,g) < min_degree_neighbor && path.size()==2) {
+                min_degree_neighbor = degree(successor,g);
+                min_degree_neighbor_vertex = successor;
+            }
+        }
+    }
+    for(auto e : boost::make_iterator_range(boost::in_edges(min_degree_vertex, g))) {
+        auto predecessor = boost::source(e, g);
+        if(type(predecessor, g) == NODE) {
+            std::vector<Vertex> neighbors = {min_degree_vertex, predecessor};
+            auto path = path_closing(gbn, neighbors);
+
+            if (degree(predecessor, g) < min_degree_neighbor && path.size() == 2) {
+                min_degree_neighbor = degree(predecessor, g);
+                min_degree_neighbor_vertex = predecessor;
+            }
+        }
+    }
+
+    std::vector<Vertex> minimal_degree_neighbors = {min_degree_vertex, min_degree_neighbor_vertex};
+    merge_vertices(gbn, minimal_degree_neighbors);
+
+    return gbn;
 }
 
 void update_dependent_wires(WireStructure &wire_structure, Wire independent_wire, std::vector<Vertex> &affected_vertices_vec) {
