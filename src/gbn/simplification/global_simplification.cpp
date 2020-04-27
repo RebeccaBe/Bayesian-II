@@ -120,11 +120,11 @@ bool normalize_substoch_front_vertices_without_inputs(GBN& gbn, Vertex v, std::s
 	m->set(BitVec(1),BitVec(0), m->get(BitVec(1),BitVec(0))/sum);*/
 
 	double sum = 0;
-	for(std::size_t assignmentX = 0; assignmentX <= pow((m->m),2); assignmentX++)
+	for(std::size_t assignmentX = 0; assignmentX <= pow(2, (m->m)); assignmentX++)
 		sum += m->get(assignmentX, BitVec(0));
 
-	for(std::size_t assignmentX = 0; assignmentX <= pow((m->m),2); assignmentX++)
-		m->set(assignmentX, BitVec(0), m->get(assignmentX, BitVec(0)) / sum);
+	for(std::size_t assignmentX = 0; assignmentX <= pow(2, (m->m)); assignmentX++)
+        m->set(assignmentX, BitVec(0), m->get(assignmentX, BitVec(0)) / sum);
 
 	m->is_stochastic = true;
 
