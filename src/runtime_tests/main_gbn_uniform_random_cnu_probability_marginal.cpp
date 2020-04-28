@@ -21,6 +21,7 @@
 #include "../cnu/fire_transition.h"
 #include "helpers/random_transition_helper.h"
 #include "helpers/cn_parameters.h"
+#include "../gbn/evaluation/evaluation.h"
 
 int main(int argc, const char** argv)
 {
@@ -52,6 +53,7 @@ int main(int argc, const char** argv)
 		("detailed", "")
 
 		("free-choice", "1 or 0", cxxopts::value<bool>()->default_value("false"))
+		("marginal", "Type cannot be changed", cxxopts::value<bool>()->default_value("true"))
 		;
 
 	auto params = options.parse(argc, argv);
@@ -70,7 +72,6 @@ int main(int argc, const char** argv)
 
 	std::random_device rd;  
 	std::mt19937 mt(rd());
-    std::map<std::string, std::size_t> operations;
 
 	std::ofstream csv_file(params["export-name"].as<std::string>()+".csv");
 
@@ -109,16 +110,15 @@ int main(int argc, const char** argv)
                 auto chosen_transition = rand_transition_helper.choose_transition(cn, i_transition);
 
 				auto callback = (is_detailed) ? [&operation](std::string high_level, std::string low_level) { std::cout << high_level << " " << low_level << std::endl; } : std::function<void(std::string,std::string)>();
-                auto callback_simplification = (is_detailed) ? [&operations](const GBN& gbn,std::string op) { operations[op]++; std::cout << op << std::endl;} : std::function<void(const GBN&,std::string)>();
 				fire_with_probability_on_gbn(cn, gbn, i_transition, chosen_transition, callback);
-
-				simplification(gbn, callback_simplification);
 
 				if(is_detailed) {
 					std::ofstream f("run.dot");
 					draw_gbn_graph(f, gbn, std::to_string(i_fire));
 				}
 			}
+			evaluate_specific_place(0, gbn);
+
             auto end_time_gbn = std::chrono::steady_clock::now();
 
 			double diff_milliseconds_gbn = std::chrono::duration<double, std::milli>(end_time_gbn-start_time_gbn).count();
@@ -126,10 +126,6 @@ int main(int argc, const char** argv)
 			csv_file << n_places << ";" << diff_milliseconds_gbn << std::endl;
 		}
 	}
-
-	/*if(is_detailed)
-        for (auto operation : operations) std::cout << operation.first << ": " << operation.second << std::endl;
-    */
 
 	return 0;
 }

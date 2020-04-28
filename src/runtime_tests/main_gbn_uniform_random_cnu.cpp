@@ -48,8 +48,9 @@ int main(int argc, const char** argv)
 		("export-name", "", cxxopts::value<std::string>()->default_value("out"))
 		("detailed", "")
 
+		("marginal", "Type cannot be changed", cxxopts::value<bool>()->default_value("false"))
 		("free-choice", "1 or 0", cxxopts::value<bool>()->default_value("false"))
-		("comparison-value", "Compared to n = how many transition get set off once at a time?", cxxopts::value<std::size_t>()->default_value("1"))
+		//("comparison-value", "Compared to n = how many transition get set off once at a time?", cxxopts::value<std::size_t>()->default_value("1"))
 		;
 
 	auto params = options.parse(argc, argv);

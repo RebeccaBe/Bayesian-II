@@ -13,6 +13,7 @@
 #include "../../libs/cxxopts/include/cxxopts.hpp"
 #include "helpers/cn_parameters.h"
 #include "helpers/random_transition_helper.h"
+#include "../cn/randomized_generation_fc.h"
 
 int main(int argc, const char** argv)
 {
@@ -41,6 +42,9 @@ int main(int argc, const char** argv)
 
 		("export-name", "", cxxopts::value<std::string>()->default_value("out"))
 		("detailed", "")
+
+		("marginal", "Type cannot be changed", cxxopts::value<bool>()->default_value("false"))
+		("free-choice", "1 or 0", cxxopts::value<bool>()->default_value("false"))
 		;
 	auto params = options.parse(argc, argv);
 
@@ -54,6 +58,7 @@ int main(int argc, const char** argv)
 	write_cn_params(param_file,cn_params);
 
 	bool is_detailed = params.count("detailed") > 0;
+    bool is_free_choice = cn_params.FREE_CHOICE;
 
 	std::random_device rd;  
 	std::mt19937 mt(rd()); 
@@ -75,8 +80,14 @@ int main(int argc, const char** argv)
 			std::size_t n_max_tokens = std::llround(n_places * cn_params.PERCENT_MAX_TOKENS);
 			std::size_t n_transitions = std::llround(n_places * cn_params.PERCENT_TRANSITIONS);
 
-			// generate random cn 
-			auto cn = randomize_cn(n_places, n_transitions, n_min_tokens, n_max_tokens, cn_params.N_MIN_PRE_PLACES, cn_params.N_MAX_PRE_PLACES, cn_params.N_MIN_POST_PLACES, cn_params.N_MAX_POST_PLACES, mt);
+            // generate random cn
+            CN cn;
+            if(is_free_choice) {
+                cn = randomize_fc_cn(n_places, n_transitions, n_min_tokens, n_max_tokens, cn_params.N_MIN_PRE_PLACES, cn_params.N_MAX_PRE_PLACES, cn_params.N_MIN_POST_PLACES, cn_params.N_MAX_POST_PLACES, mt);
+            } else {
+                cn = randomize_cn(n_places, n_transitions, n_min_tokens, n_max_tokens, cn_params.N_MIN_PRE_PLACES, cn_params.N_MAX_PRE_PLACES, cn_params.N_MIN_POST_PLACES, cn_params.N_MAX_POST_PLACES, mt);
+            }
+
 			auto joint_dist = build_uniform_joint_dist(n_places);
 			auto rand_transition_helper = RandomTransitionHelper(cn, cn_params.RAND_TRANSITION_TYPE, cn_params.P_SUCCESS);
 

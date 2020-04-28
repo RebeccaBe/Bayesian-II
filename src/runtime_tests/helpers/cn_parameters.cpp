@@ -23,6 +23,7 @@ CN_Parameters read_cn_params(const cxxopts::ParseResult& params)
 	rtn.P_SUCCESS = params["p-success"].as<double>();
 
 	rtn.FREE_CHOICE = params["free-choice"].as<bool>();
+    rtn.MARGINAL = params["marginal"].as<bool>();
 	//rtn.COMPARISON_VALUE = params["comparison-value"].as<std::size_t>();
 
 	rtn.N_MAX_TRANSITIONS_PER_OP = params["n-max-transitions-per-op"].as<std::size_t>();
@@ -51,6 +52,7 @@ void write_cn_params(std::ostream& ostr, const CN_Parameters& cn_params)
 	ostr << "P_SUCCESS: " << cn_params.P_SUCCESS << std::endl;
 
 	ostr << "FREE_CHOICE: " << cn_params.FREE_CHOICE << std::endl;
+    ostr << "MARGINAL: " << cn_params.MARGINAL << std::endl;
 	//ostr << "COMPARISON_VALUE: " << cn_params.COMPARISON_VALUE << std::endl;
 
 	ostr << "N_MAX_TRANSITIONS_PER_OP: " << cn_params.N_MAX_TRANSITIONS_PER_OP << std::endl;

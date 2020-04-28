@@ -21,6 +21,7 @@ struct CN_Parameters {
 	double P_SUCCESS;
 
 	bool FREE_CHOICE;
+	bool MARGINAL;
 	//std::size_t COMPARISON_VALUE;
 
 	std::size_t N_MAX_TRANSITIONS_PER_OP;
