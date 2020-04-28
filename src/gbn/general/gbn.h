@@ -86,3 +86,6 @@ const std::vector<Vertex>& input_vertices(const GBN& gbn);
 const std::vector<Vertex>& output_vertices(const GBN& gbn);
 
 std::size_t degree(const GBNGraph::vertex_descriptor& v, const GBNGraph& g);
+std::vector<Vertex> neighbors(const GBNGraph::vertex_descriptor& v, const GBNGraph& g);
+std::vector<Vertex> all_neighbors(const GBNGraph::vertex_descriptor& v, const GBNGraph& g);
+std::vector<Edge> all_edges(std::vector<GBNGraph::vertex_descriptor>& vertices, const GBNGraph& g);

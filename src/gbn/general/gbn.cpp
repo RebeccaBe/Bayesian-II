@@ -116,3 +116,55 @@ std::size_t degree(const GBNGraph::vertex_descriptor& v, const GBNGraph& g) {
     return degree;
 }
 
+std::vector<Vertex> neighbors(const GBNGraph::vertex_descriptor& v, const GBNGraph& g) {
+    std::vector<Vertex> neighbors;
+
+    for(auto e : boost::make_iterator_range(boost::out_edges(v,g))) {
+        auto successor = boost::target(e, g);
+        if(type(successor, g) == NODE)
+            neighbors.push_back(successor);
+    }
+
+    for(auto e : boost::make_iterator_range(boost::in_edges(v,g))) {
+        auto predecessor = boost::source(e, g);
+        if(type(predecessor, g) == NODE)
+            neighbors.push_back(predecessor);
+    }
+
+    return neighbors;
+}
+
+std::vector<Vertex> all_neighbors(const GBNGraph::vertex_descriptor& v, const GBNGraph& g) {
+    std::vector<Vertex> neighbors;
+
+    for(auto e : boost::make_iterator_range(boost::out_edges(v,g))) {
+        auto successor = boost::target(e, g);
+        neighbors.push_back(successor);
+    }
+
+    for(auto e : boost::make_iterator_range(boost::in_edges(v,g))) {
+        auto predecessor = boost::source(e, g);
+        neighbors.push_back(predecessor);
+    }
+
+    return neighbors;
+}
+
+std::vector<Edge> all_edges(std::vector<Vertex>& vertices, const GBNGraph& g) {
+    std::vector<Edge> all_edges;
+
+    for(auto v : vertices) {
+        for(auto e : boost::make_iterator_range(boost::out_edges(v,g))) {
+            if(std::find(all_edges.cbegin(), all_edges.cend(), e) == all_edges.cend())
+                all_edges.push_back(e);
+        }
+        for(auto e : boost::make_iterator_range(boost::in_edges(v,g))) {
+            if(std::find(all_edges.cbegin(), all_edges.cend(), e) == all_edges.cend())
+                all_edges.push_back(e);
+        }
+    }
+     return all_edges;
+}
+
+
+

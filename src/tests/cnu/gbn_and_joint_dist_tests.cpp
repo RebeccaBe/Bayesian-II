@@ -242,6 +242,6 @@ TEST_CASE("Normalizing matrices by columns should work") {
     auto p_matrix = read_matrix({ "dynamic 1 1 [0.2,0;0.2,0]" });
 
     REQUIRE(p_matrix->get(BitVec("0"), BitVec("0")) == 0.2);
-    normalize_matrix_cols(*p_matrix);
+    normalize_matrix_cols(p_matrix);
     REQUIRE(p_matrix->get(BitVec("0"), BitVec("0")) == 0.5);
 }

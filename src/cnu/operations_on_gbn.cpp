@@ -344,7 +344,7 @@ void successStoch_op(const std::vector<std::vector<std::size_t>> pre_places, con
         }
     }
 
-    normalize_matrix_cols(*matrix);
+    normalize_matrix_cols(matrix);
 
     auto& g = gbn.graph;
     auto& output_vertices = ::output_vertices(gbn);
@@ -371,42 +371,45 @@ void successStoch_op(const std::vector<std::vector<std::size_t>> pre_places, con
     }
 }
 
-void normalize_matrix_cols(Matrix& matrix) {
+void normalize_matrix_cols(MatrixPtr matrix) {
+    if(matrix->is_stochastic)
+        return;
+
     unsigned long long i_max_row = 1;
     unsigned long long i_max_col = 1;
-    i_max_col = i_max_col << matrix.n;
-    i_max_row = i_max_row << matrix.m;
+    i_max_col = i_max_col << matrix->n;
+    i_max_row = i_max_row << matrix->m;
 
     for(unsigned long long i_col = 0; i_col < i_max_col; i_col++) {
         double col_sum = 0;
         for(unsigned long long i_row = 0; i_row < i_max_row; i_row++)
-            col_sum += matrix.get(i_row, i_col);
+            col_sum += matrix->get(i_row, i_col);
 
         if (col_sum > 0)
             for(unsigned long long i_row = 0; i_row < i_max_row; i_row++) {
-                double old_val = matrix.get(i_row, i_col);
+                double old_val = matrix->get(i_row, i_col);
                 if(old_val > 0)
-                    matrix.set(i_row, i_col, old_val / col_sum);
+                    matrix->set(i_row, i_col, old_val / col_sum);
             }
     }
 }
 
-void normalize_matrix_rows(Matrix& matrix) {
+void normalize_matrix_rows(MatrixPtr matrix) {
     unsigned long long i_max_row = 1;
     unsigned long long i_max_col = 1;
-    i_max_col = i_max_col << matrix.n;
-    i_max_row = i_max_row << matrix.m;
+    i_max_col = i_max_col << matrix->n;
+    i_max_row = i_max_row << matrix->m;
 
     for(unsigned long long i_row = 0; i_row < i_max_row; i_row++) {
         double row_sum = 0;
         for(unsigned long long i_col = 0; i_col < i_max_col; i_col++)
-            row_sum += matrix.get(i_row, i_col);
+            row_sum += matrix->get(i_row, i_col);
 
         if (row_sum > 0)
             for(unsigned long long i_col = 0; i_col < i_max_col; i_col++) {
-                double old_val = matrix.get(i_row, i_col);
+                double old_val = matrix->get(i_row, i_col);
                 if(old_val > 0)
-                    matrix.set(i_row, i_col, old_val / row_sum);
+                    matrix->set(i_row, i_col, old_val / row_sum);
             }
     }
 }

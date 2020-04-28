@@ -23,6 +23,55 @@ void test_matrices_equal(const Matrix& m1, const Matrix& m2)
 			REQUIRE(m1.get(to, from) == Approx(m2.get(to, from)));
 }
 
+void test_matrices_equal_marginal_prob(const Matrix& m1, const Matrix& m2, std::size_t place)
+{
+
+    if(m1.n > 0 || m2.n > 0)
+        throw std::logic_error("Both matrices cannot have more than one column (n=0).");
+
+    if(m1.m == 1) {
+        if(m2.m == 1) {
+            test_matrices_equal(m1, m2);
+            return;
+        }
+        MatrixPtr sum_matrix = std::make_shared<DynamicMatrix>(0, 1);
+
+        unsigned long long to_max = 1;
+        to_max = to_max << m2.m;
+
+        for(Index to = 0; to < to_max; to++) {
+            BitVec assignment = to;
+            if(assignment[place] == 0)
+                sum_matrix->add(0,0,m2.get(to, 0));
+            else if (assignment[place] == 1)
+                sum_matrix->add(1,0,m2.get(to, 0));
+        }
+        test_matrices_equal(m1, *sum_matrix);
+        return;
+    }
+
+    else if(m2.m == 1) {
+        MatrixPtr sum_matrix = std::make_shared<DynamicMatrix>(0, 1);
+
+        unsigned long long to_max = 1;
+        to_max = to_max << m1.m;
+
+        for(Index to = 0; to < to_max; to++) {
+            BitVec assignment = to;
+            if(assignment[place] == 0)
+                sum_matrix->add(0,0,m1.get(to, 0));
+            else if (assignment[place] == 1)
+                sum_matrix->add(1,0,m1.get(to, 0));
+        }
+        test_matrices_equal(m2, *sum_matrix);
+        return;
+    }
+
+    else {
+        throw std::logic_error("A marginal probability matrix can only have two rows (m=1).");
+    }
+}
+
 bool check_matrices_equal(const Matrix& m1, const Matrix& m2)
 {
 	REQUIRE(m1.n == m2.n);

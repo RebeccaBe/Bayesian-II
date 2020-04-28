@@ -16,6 +16,6 @@ void successStoch_op(const std::vector<std::vector<std::size_t>> pre_places,
                  const std::vector<double> probabilities, GBN& gbn);
 
 bool validate_transition(std::vector<std::size_t> places, bool condition, GBN& gbn);
-void normalize_matrix_rows(Matrix& matrix);
-void normalize_matrix_cols(Matrix& matrix);
+void normalize_matrix_rows(MatrixPtr matrix);
+void normalize_matrix_cols(MatrixPtr matrix);
 

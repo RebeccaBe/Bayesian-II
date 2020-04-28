@@ -180,6 +180,10 @@ add_executable(rt_gbn_uniform_p src/runtime_tests/main_gbn_uniform_random_cnu_pr
 target_link_libraries(rt_gbn_uniform_p core_lib)
 target_link_libraries(rt_gbn_uniform_p Boost::regex Boost::filesystem)
 
+add_executable(rt_gbn_uniform_p_marg src/runtime_tests/main_gbn_uniform_random_cnu_probability_marginal.cpp)
+target_link_libraries(rt_gbn_uniform_p_marg core_lib)
+target_link_libraries(rt_gbn_uniform_p_marg Boost::regex Boost::filesystem)
+
 add_executable(rt_joint_dist_uniform_p src/runtime_tests/main_joint_dist_uniform_random_cnu_probability.cpp)
 target_link_libraries(rt_joint_dist_uniform_p core_lib)
 target_link_libraries(rt_joint_dist_uniform_p Boost::regex Boost::filesystem)

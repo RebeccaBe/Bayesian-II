@@ -2,6 +2,10 @@
 #include "../../helpers.hpp"
 #include <iostream>
 #include "probability_bookkeeper.h"
+#include "../general/gbn_io.h"
+#include "../modification/vertex_add_remove.h"
+#include "../general/subgbn.h"
+#include "../simplification/global_simplification.h"
 
 
 // returns which vertices have to be updated
@@ -29,6 +33,17 @@ std::vector<Vertex> flip_wire(Wire &wire) {
     }
 
     return changed_vertices;
+}
+
+void update_dependent_wires(WireStructure &wire_structure, Wire independent_wire, std::vector<Vertex> &affected_vertices_vec) {
+    for (Wire &w : wire_structure.wires) {
+        if (!w.independent) {
+            if (w.master_wire == independent_wire.name) {
+                auto new_affected_vertices_vec = flip_wire(w);
+                affected_vertices_vec.insert(affected_vertices_vec.end(), new_affected_vertices_vec.begin(), new_affected_vertices_vec.end());
+            }
+        }
+    }
 }
 
 MatrixPtr evaluate(const GBN &gbn) {
@@ -111,6 +126,136 @@ MatrixPtr evaluate(const GBN &gbn) {
     return m;
 }
 
+std::vector<Vertex> expand_list(GBN gbn, std::vector<Vertex> nodes) {
+    std::vector<Vertex> expanded_list = nodes;
+    std::vector<Vertex> neighbors_v;
+
+    for(auto n : nodes) {
+        auto neighbors_n = all_neighbors(n, gbn.graph);
+        neighbors_v.insert(std::end(neighbors_v), std::begin(neighbors_n), std::end(neighbors_n));
+    }
+
+    for(auto n : neighbors_v) {
+        auto neighbors_n = all_neighbors(n, gbn.graph);
+        bool neighbors_included_in_nodes = true;
+
+        for(auto nn : neighbors_n) {
+            if(!is_in(nn, nodes)) {
+                neighbors_included_in_nodes = false;
+                break;
+            }
+        }
+
+        if(neighbors_included_in_nodes && !is_in(n, expanded_list) && type(n, gbn.graph) == NODE)
+            expanded_list.push_back(n);
+    }
+
+    return expanded_list;
+}
+
+GBN node_elimination(GBN& gbn, std::vector<Vertex> nodes) {
+    auto &g = gbn.graph;
+
+    std::size_t min_degree = all_edges(nodes, g).size() + 1;
+    std::vector<Vertex> min_degree_neighbors = {nodes[0], nodes[1]}; //dummy values; are these even  necessary?
+
+    //First get rid of the Terminator nodes
+    bool terminator_exists = false;
+    for (auto v : nodes) {
+        if (m(v, g) == 0) {
+            terminator_exists = true;
+            auto neighbors_v = neighbors(v, g); //this checks all vertex pairs at least twice
+
+            for (auto neighbor_v : neighbors_v) {
+                std::vector<Vertex> neighbors_i = {v, neighbor_v};
+
+                if(path_closing(gbn, neighbors_i).size() == 2){
+                    std::size_t v_degree = all_edges(neighbors_i, g).size();
+                    if (v_degree < min_degree) {
+                        min_degree = v_degree;
+                        min_degree_neighbors = neighbors_i;
+                    }
+                }
+            }
+        }
+    }
+
+    //Second get rid of nodes without input
+    bool no_input_exists = false;
+    if(!terminator_exists) {
+        for (auto v : nodes) {
+            if (n(v, g) == 0) {
+                no_input_exists = true;
+                auto neighbors_v = neighbors(v, g); //this checks all vertex pairs at least twice
+
+                for (auto neighbor_v : neighbors_v) {
+                    std::vector<Vertex> neighbors_i = {v, neighbor_v};
+
+                    if(path_closing(gbn, neighbors_i).size() == 2) {
+                        std::size_t v_degree = all_edges(neighbors_i, g).size();
+                        if (v_degree < min_degree) {
+                            min_degree = v_degree;
+                            min_degree_neighbors = neighbors_i;
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    if (!terminator_exists && !no_input_exists) {
+        for (auto v : nodes) {
+            auto neighbors_v = neighbors(v, g); //this checks all vertex pairs at least twice
+
+            for (auto neighbor_v : neighbors_v) {
+                std::vector<Vertex> neighbors_i = {v, neighbor_v};
+
+                if(path_closing(gbn, neighbors_i).size() == 2) {
+                    std::size_t v_degree = all_edges(neighbors_i, g).size();
+                    if (v_degree < min_degree) {
+                        min_degree = v_degree;
+                        min_degree_neighbors = neighbors_i;
+                    }
+                }
+            }
+        }
+    }
+
+    auto expanded_nodes = expand_list(gbn, min_degree_neighbors);
+    for(auto node : expanded_nodes) {
+        if(n(node, g) == 0) {
+            std::string op;
+            normalize_substoch_front_vertices_without_inputs(gbn, node, op);
+        }
+    }
+
+    merge_vertices(gbn, expanded_nodes);
+
+    return gbn;
+}
+
+void find_relevant_nodes(GBN gbn, std::set<Vertex>& nodes, std::vector<Vertex>& nodes_to_be_explored) {
+    auto g = gbn.graph;
+    auto nodes_copy = nodes;
+
+    for(auto n : nodes_to_be_explored) {
+        if(type(n, g) == NODE) nodes.insert(n);
+        nodes_to_be_explored.erase(remove(nodes_to_be_explored.begin(), nodes_to_be_explored.end(), n),
+                                   nodes_to_be_explored.end());
+        auto neighbors_n  = all_neighbors(n, g);
+        for(auto neighbor : neighbors_n) {
+            if(!is_in(neighbor, nodes) && !is_in(neighbor, nodes_to_be_explored) && type(neighbor, g) == NODE) {
+                nodes_to_be_explored.push_back(neighbor);
+            }
+        }
+    }
+    if(nodes_to_be_explored.empty()) {
+        return;
+    } else {
+        find_relevant_nodes(gbn, nodes, nodes_to_be_explored);
+    }
+}
+
 MatrixPtr evaluate_stepwise(const GBN &gbn) {
     auto gbn_result = gbn;
 
@@ -152,70 +297,47 @@ MatrixPtr evaluate_stepwise(const GBN &gbn) {
     while (changed);
 
     auto vertices = inside_vertices(gbn_result);
+    MatrixPtr m;
     if(vertices.size() > 1) {
-        return evaluate(gbn_result);
+        m = evaluate(gbn_result);
     } else {
-        return matrix(vertices.at(0), gbn_result.graph);
+        m = matrix(vertices.at(0), gbn_result.graph);
     }
+
+    normalize_matrix_cols(m);
+    return m;
 }
 
-GBN node_elimination (GBN& gbn, std::vector<Vertex> nodes) {
+MatrixPtr evaluate_specific_place(std::size_t place, const GBN &gbn_og) {
+    auto gbn = gbn_og;
     auto &g = gbn.graph;
+    auto& output_vertices = ::output_vertices(gbn);
 
-    std::size_t min_degree = degree(nodes.at(0), g);
-    std::size_t max_degree = 0;
-    Vertex min_degree_vertex = nodes.at(0);
-    for(auto v : nodes) {
-        auto v_degree = degree(v, g);
-        if(v_degree < min_degree) {
-            min_degree = v_degree;
-            min_degree_vertex = v;
-        }
-        if(v_degree > max_degree) {
-            max_degree = v_degree;
-        }
+    std::vector<Vertex> chosen_output;
+    chosen_output.push_back(output_vertices[place]);
+
+    for(std::size_t p = 0; p < gbn.m; p++) {
+        if(p == place) continue;
+
+        // get predecessor of output port
+        auto tmp_in_edges = boost::in_edges(output_vertices[p], g);
+        if(std::distance(tmp_in_edges.first, tmp_in_edges.second) != 1)
+            throw std::logic_error(std::string("Place ") + std::to_string(p) + " has none or more than one precessor");
+        auto e_pre = *(tmp_in_edges.first);
+        auto e_pos = get(edge_position, g, e_pre);
+        auto v_pre = boost::source(e_pre, g);
+
+        auto v_term = add_vertex(gbn, std::make_shared<TerminatorMatrix>(), "T");
+        auto e_term = boost::add_edge(v_pre, v_term, g).first;
+        put(edge_position, g, e_term, std::pair<std::size_t, std::size_t>{ e_pos.first, 0 });
+
+        boost::remove_edge(v_pre, output_vertices[p], g);
     }
 
-    std::size_t min_degree_neighbor =  max_degree+1;
-    Vertex min_degree_neighbor_vertex = min_degree_vertex;
-    for(auto e : boost::make_iterator_range(boost::out_edges(min_degree_vertex, g))) {
-        auto successor = boost::target(e, g);
-        if(type(successor, g) == NODE) {
-            std::vector<Vertex> neighbors = {min_degree_vertex, successor};
-            auto path = path_closing(gbn, neighbors);
+    std::set<Vertex> relevant_nodes;
+    find_relevant_nodes(gbn, relevant_nodes, chosen_output);
+    std::vector<Vertex> relevant_nodes_vector (relevant_nodes.begin(), relevant_nodes.end());
 
-            if(degree(successor,g) < min_degree_neighbor && path.size()==2) {
-                min_degree_neighbor = degree(successor,g);
-                min_degree_neighbor_vertex = successor;
-            }
-        }
-    }
-    for(auto e : boost::make_iterator_range(boost::in_edges(min_degree_vertex, g))) {
-        auto predecessor = boost::source(e, g);
-        if(type(predecessor, g) == NODE) {
-            std::vector<Vertex> neighbors = {min_degree_vertex, predecessor};
-            auto path = path_closing(gbn, neighbors);
-
-            if (degree(predecessor, g) < min_degree_neighbor && path.size() == 2) {
-                min_degree_neighbor = degree(predecessor, g);
-                min_degree_neighbor_vertex = predecessor;
-            }
-        }
-    }
-
-    std::vector<Vertex> minimal_degree_neighbors = {min_degree_vertex, min_degree_neighbor_vertex};
-    merge_vertices(gbn, minimal_degree_neighbors);
-
-    return gbn;
-}
-
-void update_dependent_wires(WireStructure &wire_structure, Wire independent_wire, std::vector<Vertex> &affected_vertices_vec) {
-    for (Wire &w : wire_structure.wires) {
-        if (!w.independent) {
-            if (w.master_wire == independent_wire.name) {
-                auto new_affected_vertices_vec = flip_wire(w);
-                affected_vertices_vec.insert(affected_vertices_vec.end(), new_affected_vertices_vec.begin(), new_affected_vertices_vec.end());
-            }
-        }
-    }
+    auto sub_gbn = SubGBN::make_from_vertices(gbn, relevant_nodes_vector);
+    return evaluate_stepwise(sub_gbn.gbn);
 }

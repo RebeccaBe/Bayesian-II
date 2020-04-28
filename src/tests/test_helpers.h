@@ -15,6 +15,7 @@ constexpr std::size_t N_AUTOMATED_RUNS = 100;
 
 void test_matrices_equal(const Matrix& m1, const Matrix& m2);
 bool check_matrices_equal(const Matrix& m1, const Matrix& m2);
+void test_matrices_equal_marginal_prob(const Matrix& m1, const Matrix& m2, std::size_t place);
 
 void test_joint_dist_matrix_equal(const JointDist& joint_dist, const Matrix& m);
 bool check_joint_dist_matrix_equal(const JointDist& joint_dist, const Matrix& m);
