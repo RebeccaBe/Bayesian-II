@@ -164,14 +164,20 @@ void successStoch_op(const std::vector<std::vector<std::size_t>> pre_places, con
 
         for(auto [marking,p] : worker_dist) {
             auto target = build_target_marking(marking, pre_places[i], 0);
-            if(target != marking)
-                map_pre[target].push_back(marking);
+
+            bool valid_pre_marking = true;
+            for(auto p : pre_places[i]) {
+                if(marking[p] == 0) valid_pre_marking = false;
+            }
+
+            if(valid_pre_marking) map_pre[target].push_back(marking);
         }
         set_op(pre_places[i], 0, worker_dist);
 
         for(auto [marking,p] : worker_dist) {
-            auto target = build_target_marking(marking, post_places[i], 1);
-            for (auto el : map_pre[marking]) map_post[target].push_back(el);
+                auto target = build_target_marking(marking, post_places[i], 1);
+                for (auto el : map_pre[marking]) map_post[target].push_back(el);
+
         }
 
         for (auto& [marking,p] : dist) {
@@ -182,10 +188,10 @@ void successStoch_op(const std::vector<std::vector<std::size_t>> pre_places, con
                     if(m == build_target_marking(m, pre_places[i], 1))
                         normalization_factor += probabilities[i];
 
-                p += (original_dist[m] * (probability / normalization_factor));
+                if(normalization_factor > 0)
+                    p += (original_dist[m] * (probability / normalization_factor));
             }
         }
     }
-
     normalize_op(dist);
 }

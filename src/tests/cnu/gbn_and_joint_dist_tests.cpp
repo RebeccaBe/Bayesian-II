@@ -157,17 +157,17 @@ TEST_CASE("CNU ops on joint dist and GBN should lead to same dist")
 
 TEST_CASE("CNU probability ops on joint dist and GBN should lead to same dist")
 {
-	std::size_t n_places = 22;
-	std::size_t n_transitions = 5;
-	std::size_t n_min_tokens = 5;
-	std::size_t n_max_tokens = 5;
-	std::size_t n_min_pre_places = 1;
-	std::size_t n_max_pre_places = 1;
-	std::size_t n_min_post_places = 1;
-	std::size_t n_max_post_places = 1;
+    std::size_t n_places = 10;
+    std::size_t n_transitions = 30;
+    std::size_t n_min_tokens = 10;
+    std::size_t n_max_tokens = 10;
+    std::size_t n_min_pre_places = 1;
+    std::size_t n_max_pre_places = 2;
+    std::size_t n_min_post_places = 1;
+    std::size_t n_max_post_places = 2;
 
-	std::size_t n_simplification_steps = 2;
-	std::size_t n_random_transitions_per_simplify = 10;
+    std::size_t n_simplification_steps = 2;
+    std::size_t n_random_transitions_per_simplify = 10;
 
 	std::random_device rd;
 	std::mt19937 mt(rd());
@@ -199,15 +199,15 @@ TEST_CASE("CNU probability ops on joint dist and GBN should lead to same dist")
 TEST_CASE("CNU stochastic ops on joint dist and GBN should lead to same dist")
 {
     std::size_t n_places = 10;
-    std::size_t n_transitions = 5;
-    std::size_t n_min_tokens = 5;
-    std::size_t n_max_tokens = 5;
+    std::size_t n_transitions = 30;
+    std::size_t n_min_tokens = 10;
+    std::size_t n_max_tokens = 10;
     std::size_t n_min_pre_places = 1;
-    std::size_t n_max_pre_places = 1;
+    std::size_t n_max_pre_places = 2;
     std::size_t n_min_post_places = 1;
-    std::size_t n_max_post_places = 1;
+    std::size_t n_max_post_places = 2;
 
-    std::size_t n_simplification_steps = 5;
+    std::size_t n_simplification_steps = 2;
     std::size_t n_random_transitions_per_simplify = 10;
 
     std::random_device rd;
