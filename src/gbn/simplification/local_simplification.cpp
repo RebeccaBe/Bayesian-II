@@ -208,8 +208,7 @@ bool check_and_apply_F4(GBN& gbn, Vertex v_oneb, std::string& op)
 				found = true;
 				break;
 			}
-		} else if (type(v_to,g) == NODE && matrix(v_to, g)->type == DIAGONAL)
-		{
+		} /*else if (type(v_to,g) == NODE && matrix(v_to, g)->type == DIAGONAL) {
 			auto& m_DIAG = dynamic_cast<DiagonalMatrix&>(*matrix(v_to, g));
 			if((m_DIAG.ones.size() != (pow(2, m_DIAG.k)-1)) ||
 				(m_DIAG.get(0,0) == 1 && m_DIAG.get((pow(2, m_DIAG.k)-1),(pow(2, m_DIAG.k)-1)) == 1)) {
@@ -226,7 +225,7 @@ bool check_and_apply_F4(GBN& gbn, Vertex v_oneb, std::string& op)
 				found = true;
 				break;
 			}
-		}
+		}*/
 	}
 
 	if(!found) 
@@ -312,8 +311,7 @@ bool check_and_apply_F5(GBN& gbn, Vertex v_oneb, std::string& op)
 				found = true;
 				break;
 			}
-		} else if (type(v_to,g) == NODE && matrix(v_to, g)->type == DIAGONAL)
-		{
+		} /*else if (type(v_to,g) == NODE && matrix(v_to, g)->type == DIAGONAL) {
 			auto& m_DIAG = dynamic_cast<DiagonalMatrix&>(*matrix(v_to, g));
 			if((m_DIAG.ones.size() != (pow(2, m_DIAG.k)-1)) ||
 			   (m_DIAG.get(0,0) == 1 && m_DIAG.get((pow(2, m_DIAG.k)-1),(pow(2, m_DIAG.k)-1)) == 1)) {
@@ -330,7 +328,7 @@ bool check_and_apply_F5(GBN& gbn, Vertex v_oneb, std::string& op)
                 found = true;
                 break;
 			}
-		}
+		}*/
 	}
 
 	if(!found) 
@@ -574,11 +572,11 @@ bool reduce_diagonal_matrix(GBN& gbn, Vertex v, std::string& op) {
 
 	auto& m_DIAG = dynamic_cast<DiagonalMatrix&>(m);
 
-    if(m_DIAG.ones.size() % 2 != 0)
+    if(m_DIAG.data.size() % 2 != 0)
         return false;
 
 	//if Diagonal Matrix == ZeroMatrix TODO??: I could also just REPLACE Diagonal for Zero Matrix
-	if(m_DIAG.ones.empty()) {
+	if(m_DIAG.data.empty()) {
 
 		for(auto e_in : boost::make_iterator_range(boost::in_edges(v, g))) {
 
@@ -668,7 +666,7 @@ bool reduce_diagonal_matrix(GBN& gbn, Vertex v, std::string& op) {
 
 		//create vertex w/o independent vars
         if(new_matrix_size > 0) {
-            auto m_new = std::make_shared<DiagonalMatrix>(new_matrix_size, std::vector<BitVec>());
+            auto m_new = std::make_shared<DiagonalMatrix>(new_matrix_size);
 
             BitVec assignment_old(0);
             BitVec assignment_new(0);

@@ -181,8 +181,8 @@ void ZeroMatrix::add(const BitVec& /*to*/, const BitVec& /*from*/, double /*val*
 }
 
 // DiagonalMatrix
-DiagonalMatrix::DiagonalMatrix(const Index k, std::vector<BitVec> ones)
-		: Matrix(k,k,DIAGONAL,false), k(k), ones(ones)
+DiagonalMatrix::DiagonalMatrix(const Index k)
+		: Matrix(k,k,DIAGONAL,false), k(k)
 {
 	if(n != m)
 		throw std::logic_error("Tried to create DiagonalMatrix where n != m");
@@ -193,34 +193,24 @@ DiagonalMatrix::~DiagonalMatrix()
 
 double DiagonalMatrix::get(const BitVec& to, const BitVec& from) const
 {
-	//auto to_copy = to | one_mask_m;
-
 	if(to != from)
 		return 0;
 
-
-	if(is_in(to, ones))
-		return 1;
-    else
-	    return 0;
+	for(auto d : data) {
+	    if(d.first == to) return d.second;
+	}
+	return 0;
 }
 
 void DiagonalMatrix::set(const BitVec& to, const BitVec& from, double val)
 {
 	if(to != from)
 		throw std::logic_error("Tried to set entry of DiagonalMatrix on n != m");
-	if(val == 1) {
-        if (!is_in(to, ones))
-            ones.push_back(to);
-    } else if(val == 0) {
-        if (is_in(to, ones))
-            ones.erase(std::remove(ones.begin(), ones.end(), to), ones.end());
-    } else
-    throw std::logic_error("Tried to set entry of DiagonalMatrix to non 0 or non 1.");
 
+    data[to] = val;
 }
 
 void DiagonalMatrix::add(const BitVec& to, const BitVec& from, double val)
 {
-	if(val == 1) DiagonalMatrix::set(to, from, val);
+    data[to] += val;
 }

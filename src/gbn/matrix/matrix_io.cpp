@@ -26,23 +26,8 @@ void print_matrix_label(std::ostream& ostr, const Matrix& matrix)
 			}
 	    case DIAGONAL:
             {
-                auto m = dynamic_cast<const DiagonalMatrix&>(matrix);
+                ostr << "diagonal";
 
-                auto ones_integer = std::vector<std::size_t>();
-                for(auto bitvec : m.ones){
-                    ones_integer.push_back(bitvec.to_ulong());
-                }
-
-                auto print_ones = std::vector<bool>();
-                for(std::size_t i = 0; i < pow(2, m.k); i++) {
-                    auto res = std::find(ones_integer.begin(), ones_integer.end(), i);
-                    if(res != ones_integer.end()) print_ones.push_back(1);
-                    else print_ones.push_back(0);
-                }
-
-                ostr << "DIAG_{" << m.k << ",";
-                for(auto bit : print_ones) ostr << bit;
-                ostr << "}";
                 break;
             }
 		case ONE_B:
@@ -95,20 +80,14 @@ void write_matrix(std::ostream& ostr, const Matrix& matrix)
         case DIAGONAL:
             {
                 auto m = dynamic_cast<const DiagonalMatrix&>(matrix);
+                ostr << "diagonal " << m.k << " [";
+                unsigned long long i_max_col = 1;
+                i_max_col = i_max_col << matrix.n;
 
-                auto ones_integer = std::vector<std::size_t>();
-                for(auto bitvec : m.ones) ones_integer.push_back(bitvec.to_ulong());
+                for(unsigned long long i_col = 0; i_col < i_max_col; i_col++)
+                    ostr << ((i_col == 0) ? "" : ",") << m.get(i_col, i_col);
+                ostr << "]";
 
-                auto print_ones = std::vector<bool>();
-                for(std::size_t i = 0; i < pow(2, m.k); i++) {
-                    auto res = std::find(ones_integer.begin(), ones_integer.end(), i);
-                    if(res != ones_integer.end()) print_ones.push_back(1);
-                    else print_ones.push_back(0);
-                }
-
-                ostr << "DIAG_{" << m.k << ",";
-                for(auto bit : print_ones) ostr << bit;
-                ostr << "}";
                 break;
             }
 		case ONE_B:
@@ -141,9 +120,11 @@ MatrixPtr read_matrix(std::vector<std::string> lines)
 	std::regex one_b_regex("^1_\\{?([0-9])\\}?", std::regex_constants::icase);
 	std::regex terminator_regex("^T", std::regex_constants::icase);
 	std::regex zero_regex("^0_\\{?([0-9]+),([0-9]+)\\}", std::regex_constants::icase);
-	std::regex diagonal_regex("^DIAG_\\{?([0-9]+),([0-1]+)\\}?", std::regex_constants::icase);
+	//std::regex diagonal_regex("^DIAG_\\{?([0-9]+),([0-1]+)\\}?", std::regex_constants::icase);
+    std::regex diagonal_regex("^diagonal ([0-9]+) ?\\[?([0-9,\\.\\/]*)\\]?", std::regex_constants::icase);
 
-	// dynamic matrix
+
+    // dynamic matrix
 	std::smatch matches;
 	if(std::regex_match(lines[0], matches, dynamic_regex))
 	{
@@ -225,27 +206,41 @@ MatrixPtr read_matrix(std::vector<std::string> lines)
 		return std::make_shared<ZeroMatrix>(n,m);
 	}
 
-	//Diagonal matrix
-	if(std::regex_match(lines[0], matches, diagonal_regex))
-	{
-        int k = std::stoi(matches[1].str());
+    // diagonal matrix
+    if(std::regex_match(lines[0], matches, diagonal_regex))
+    {
+        int k = std::stoi(matches[1]);
 
         if(k > 63)
             throw std::logic_error("Dimensions of matrix too big.");
 
-        std::string matrix_str = matches[2];
-        MatrixPtr rtn = std::make_shared<DiagonalMatrix>(k, std::vector<BitVec>());
-        auto& matrix = *rtn;
+        std::string diag_str = matches[2];
 
-        if(!matrix_str.empty() && matrix_str.size() == pow(2, k)) {
-            for (unsigned long long i = 0; i < matrix_str.size(); i++) {
-                if (matrix_str[i] == '1') matrix.set(i, i, 1);
+        MatrixPtr rtn = std::make_shared<DiagonalMatrix>(k);
+        auto& matrix = *rtn;
+        // [1,2,3,4] format
+        if(!diag_str.empty())
+        {
+            boost::trim(diag_str);
+
+            std::vector<std::string> val_strs;
+            boost::split(val_strs, diag_str, boost::is_any_of(","));
+            if(val_strs.size() != (static_cast<std::size_t>(1) << k))
+                throw std::logic_error(std::string("Provided array") + std::to_string(val_strs.size()) + " does not have right dimension " + std::to_string((1 << k)));
+
+            unsigned long long i_col = 0;
+            for(auto val : val_strs){
+                boost::trim_if(val,boost::is_any_of(" ,"));
+                matrix.set(i_col, i_col, read_double(val));
+                i_col++;
             }
-        } else
-            throw std::logic_error("Wrong amount of bits.");
+        }
+
+        if(!is_stochastic(*rtn))
+            rtn->is_stochastic = false;
 
         return rtn;
-	}
+    }
 
 	throw std::logic_error(std::string("Matrix could not be read. Not able to parse line")+ "'" + lines[0] + "'.");
 }

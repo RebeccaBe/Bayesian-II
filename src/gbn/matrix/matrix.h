@@ -128,9 +128,9 @@ class ZeroMatrix : public Matrix {
 class DiagonalMatrix : public Matrix {
 public:
 	const Index k;
-	std::vector<BitVec> ones;
 
-	DiagonalMatrix(const Index k, std::vector<BitVec> ones);
+    std::unordered_map<BitVec, double> data;
+    DiagonalMatrix(const Index k);
 	virtual ~DiagonalMatrix();
 
 	double get(const BitVec& to, const BitVec& from) const;

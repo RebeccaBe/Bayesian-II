@@ -15,9 +15,9 @@ TEST_CASE("Reading the three types of matrices should work") {
 	read_matrix({ "F_{4,1}" });
 	read_matrix({ "F_{4,0}" });
 
-	read_matrix({ "DIAG_{2,0011" });
-    read_matrix({ "DIAG_{3,01011110" });
-    read_matrix({ "DIAG_{1,11" });
+	read_matrix({ "diagonal 2 [0,0,1,1]" });
+    read_matrix({ "diagonal 3 [0,1,0,1,1/3,1/4,0,1]" });
+    read_matrix({ "diagonal 1 [1/3,1/4]" });
 }
 
 TEST_CASE("Terminator matrix should be correct") {
@@ -71,8 +71,8 @@ TEST_CASE("Reading matrices with fractions should work") {
 	REQUIRE(p_matrix->get(BitVec("1"), BitVec("1")) == Approx(1.0/2));
 }
 
-TEST_CASE("Reading diagonal matrices should work 1") {
-    auto p_matrix = read_matrix({ "DIAG_{2,1001}" });
+TEST_CASE("Reading diagonal matrices should work") {
+    auto p_matrix = read_matrix({ "diagonal 2 [1,0,0,1]" });
 
     REQUIRE(p_matrix->get(BitVec("00"), BitVec("00")) == 1);
     REQUIRE(p_matrix->get(BitVec("01"), BitVec("01")) == 0);
@@ -81,12 +81,12 @@ TEST_CASE("Reading diagonal matrices should work 1") {
     REQUIRE(p_matrix->get(BitVec("00"), BitVec("11")) == 0);
 }
 
-TEST_CASE("Reading diagonal matrices should work 2") {
-    auto p_matrix = read_matrix({ "DIAG_{3,11101101}" });
+TEST_CASE("Reading diagonal matrices with fractions should work") {
+    auto p_matrix = read_matrix({ "diagonal 3 [1/3,1,1,0,1/2,1,0,1]" });
 
-    REQUIRE(p_matrix->get(BitVec("000"), BitVec("000")) == 1);
+    REQUIRE(p_matrix->get(BitVec("000"), BitVec("000")) == Approx(1.0/3));
     REQUIRE(p_matrix->get(BitVec("110"), BitVec("110")) == 0);
     REQUIRE(p_matrix->get(BitVec("001"), BitVec("001")) == 1);
-    REQUIRE(p_matrix->get(BitVec("100"), BitVec("100")) == 1);
+    REQUIRE(p_matrix->get(BitVec("100"), BitVec("100")) == Approx(1.0/2));
     REQUIRE(p_matrix->get(BitVec("000"), BitVec("110")) == 0);
 }
