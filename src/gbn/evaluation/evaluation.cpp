@@ -1,11 +1,13 @@
 #include "evaluation.h"
 #include "../../helpers.hpp"
 #include <iostream>
+#include <fstream>
 #include "probability_bookkeeper.h"
 #include "../general/gbn_io.h"
 #include "../modification/vertex_add_remove.h"
 #include "../general/subgbn.h"
 #include "../simplification/global_simplification.h"
+#include "../simplification/local_simplification.h"
 
 
 // returns which vertices have to be updated
@@ -62,7 +64,7 @@ MatrixPtr evaluate(const GBN &gbn) {
 
     MatrixPtr m;
     if(!is_dynamic && (input_vertices(gbn).size() == output_vertices(gbn).size()))
-        m = std::make_shared<DiagonalMatrix>(gbn.n, std::vector<BitVec>());
+        m = std::make_shared<DiagonalMatrix>(gbn.n);
     else
         m = std::make_shared<DynamicMatrix>(gbn.n, gbn.m);
 
@@ -81,7 +83,7 @@ MatrixPtr evaluate(const GBN &gbn) {
     m->add(*wire_structure.output_bitvec, *wire_structure.input_bitvec, product);
 
     std::size_t i_wire = 0;
-    //std::cout << "number of independent wires:" << std::count_if(wires.begin(), wires.end(), [](Wire w){return w.independent;}) << std::endl;
+    std::cout << "number of independent wires:" << std::count_if(wires.begin(), wires.end(), [](Wire w){return w.independent;}) << std::endl;
     const std::size_t max_i_wire = wires.size();
 
     std::set<Vertex> affected_vertices; // TODO: optimization: replace this with flat set
@@ -126,17 +128,60 @@ MatrixPtr evaluate(const GBN &gbn) {
     return m;
 }
 
+std::size_t get_edges(std::vector<Vertex> vertices, const GBN gbn) {
+
+    auto sub_gbn = SubGBN::make_from_vertices(gbn, vertices);
+
+    auto wire_structure = build_wire_structure(sub_gbn.gbn);
+    auto wires = wire_structure.wires;
+    return std::count_if(wires.begin(), wires.end(), [](Wire w){return w.independent;});
+}
+
 std::vector<Vertex> expand_list(GBN gbn, std::vector<Vertex> nodes) {
+    auto g = gbn.graph;
+
     std::vector<Vertex> expanded_list = nodes;
     std::vector<Vertex> neighbors_v;
+    bool changed = false;
 
     for(auto n : nodes) {
-        auto neighbors_n = all_neighbors(n, gbn.graph);
+        auto neighbors_n = all_neighbors(n, g);
         neighbors_v.insert(std::end(neighbors_v), std::begin(neighbors_n), std::end(neighbors_n));
     }
 
     for(auto n : neighbors_v) {
-        auto neighbors_n = all_neighbors(n, gbn.graph);
+        if(type(n, gbn.graph) == NODE) {
+
+            auto p_m = matrix(n, g);
+             if(p_m->type == F || p_m->type == DIAGONAL) {
+                 bool all_input_edges_in_set, all_output_edges_in_set = true;
+
+                 for(auto e : boost::make_iterator_range(boost::out_edges(n,g))) {
+                     auto successor = boost::target(e, g);
+                     if(!is_in(successor, nodes)) {
+                         all_input_edges_in_set = false;
+                         break;
+                     }
+                 }
+
+                 if(!all_input_edges_in_set)
+                     for(auto e : boost::make_iterator_range(boost::in_edges(n,g))) {
+                         auto predecessor = boost::source(e, g);
+                         if(!is_in(predecessor, nodes)) {
+                             all_output_edges_in_set = false;
+                             break;
+                         }
+                     }
+
+                 if((all_input_edges_in_set || all_output_edges_in_set) && !is_in(n, expanded_list)) {
+                     expanded_list.push_back(n);
+                     changed = true;
+                     continue;
+                 }
+             }
+        }
+
+        auto neighbors_n = all_neighbors(n, g);
         bool neighbors_included_in_nodes = true;
 
         for(auto nn : neighbors_n) {
@@ -146,31 +191,88 @@ std::vector<Vertex> expand_list(GBN gbn, std::vector<Vertex> nodes) {
             }
         }
 
-        if(neighbors_included_in_nodes && !is_in(n, expanded_list) && type(n, gbn.graph) == NODE)
+        if(neighbors_included_in_nodes && !is_in(n, expanded_list) && type(n, g) == NODE)
             expanded_list.push_back(n);
     }
 
-    return expanded_list;
+    if(changed)
+        return expand_list(gbn, expanded_list);
+    else
+        return expanded_list;
+}
+
+void find_diagonal_nodes(GBN gbn, std::set<Vertex>& nodes, std::vector<Vertex>& nodes_to_be_explored) {
+    auto g = gbn.graph;
+    std::vector<Vertex> nodes_to_be_explored_new;
+
+    for(auto n : nodes_to_be_explored) {
+        if(type(n, g) == NODE) {
+            auto p_m = matrix(n, g);
+
+            if (p_m->type == F || p_m->type == DIAGONAL) nodes.insert(n);
+            auto neighbors_n = all_neighbors(n, g);
+            for (auto neighbor : neighbors_n) {
+                if(type(neighbor, g) == NODE) {
+                    auto p_m = matrix(n, g);
+
+                    if (!is_in(neighbor, nodes) && !is_in(neighbor, nodes_to_be_explored_new) &&
+                        (p_m->type == F || p_m->type == DIAGONAL)) {
+                        nodes_to_be_explored_new.push_back(neighbor);
+                    }
+                }
+            }
+        }
+    }
+    if(nodes_to_be_explored_new.empty()) {
+        return;
+    } else {
+        find_diagonal_nodes(gbn, nodes, nodes_to_be_explored_new);
+    }
 }
 
 GBN node_elimination(GBN& gbn, std::vector<Vertex> nodes) {
     auto &g = gbn.graph;
 
-    std::size_t min_degree = all_edges(nodes, g).size() + 1;
+    std::size_t min_degree = get_edges(nodes, gbn) + 1;
     std::vector<Vertex> min_degree_neighbors = {nodes[0], nodes[1]}; //dummy values; are these even  necessary?
+
+    bool diagonal_vertices_exist = false;
+    //Can I find a case, where I can actually use this for efficiency purposes?
+    /*for(auto v : nodes) {
+        auto p_m = matrix(v, g);
+        if(p_m->type == F || p_m->type == DIAGONAL) {
+
+            std::vector<Vertex> vertex;
+            vertex.push_back(v);
+
+            std::set<Vertex> diagonal_vertices;
+            find_diagonal_nodes(gbn, diagonal_vertices, vertex);
+
+            if(diagonal_vertices.size() > 1) {
+                std::vector<Vertex> diagonal_vertices_vector(diagonal_vertices.begin(), diagonal_vertices.end());
+                min_degree_neighbors = diagonal_vertices_vector;
+                diagonal_vertices_exist = true;
+                for(auto n : min_degree_neighbors) {
+                    if(type(n, g) == NODE) {
+                        auto p_m = matrix(n, g);
+                    }
+                }
+            }
+        }
+    }*/
 
     //First get rid of the Terminator nodes
     bool terminator_exists = false;
-    for (auto v : nodes) {
-        if (m(v, g) == 0) {
-            terminator_exists = true;
-            auto neighbors_v = neighbors(v, g); //this checks all vertex pairs at least twice
+    if(!diagonal_vertices_exist) {
+        for (auto v : nodes) {
+            if (m(v, g) == 0) {
+                terminator_exists = true;
+                auto neighbors_v = neighbors(v, g); //this checks all vertex pairs at least twice
 
-            for (auto neighbor_v : neighbors_v) {
-                std::vector<Vertex> neighbors_i = {v, neighbor_v};
+                for (auto neighbor_v : neighbors_v) {
+                    std::vector<Vertex> neighbors_i = {v, neighbor_v};
 
-                if(path_closing(gbn, neighbors_i).size() == 2){
-                    std::size_t v_degree = all_edges(neighbors_i, g).size();
+                    std::size_t v_degree = get_edges(neighbors_i, gbn);
                     if (v_degree < min_degree) {
                         min_degree = v_degree;
                         min_degree_neighbors = neighbors_i;
@@ -182,7 +284,7 @@ GBN node_elimination(GBN& gbn, std::vector<Vertex> nodes) {
 
     //Second get rid of nodes without input
     bool no_input_exists = false;
-    if(!terminator_exists) {
+    if(!terminator_exists && !diagonal_vertices_exist) {
         for (auto v : nodes) {
             if (n(v, g) == 0) {
                 no_input_exists = true;
@@ -191,31 +293,58 @@ GBN node_elimination(GBN& gbn, std::vector<Vertex> nodes) {
                 for (auto neighbor_v : neighbors_v) {
                     std::vector<Vertex> neighbors_i = {v, neighbor_v};
 
-                    if(path_closing(gbn, neighbors_i).size() == 2) {
-                        std::size_t v_degree = all_edges(neighbors_i, g).size();
-                        if (v_degree < min_degree) {
-                            min_degree = v_degree;
-                            min_degree_neighbors = neighbors_i;
-                        }
+                    std::size_t v_degree = get_edges(neighbors_i, gbn);
+                    if (v_degree < min_degree) {
+                        min_degree = v_degree;
+                        min_degree_neighbors = neighbors_i;
                     }
                 }
             }
         }
     }
 
-    if (!terminator_exists && !no_input_exists) {
+    //Are their loops between 2 nodes? Eliminate that next
+    bool loops_exist = false;
+    /*if(!terminator_exists && !no_input_exists && !diagonal_vertices_exist) {
+        for(auto v : nodes) {
+            if(n(v,g) > 0 && m(v,g) > 0) {
+                std::set<Vertex> successors, predecessors;
+
+                for(auto e : boost::make_iterator_range(boost::out_edges(v,g)))
+                    successors.insert(boost::target(e, g));
+
+                for(auto e : boost::make_iterator_range(boost::in_edges(v,g)))
+                    predecessors.insert(boost::source(e, g));
+
+                for(auto predecessor : predecessors) {
+                    std::vector<Vertex> neighbors_i = {v, predecessor};
+
+                    if(is_in(predecessor, successors)) {
+                        terminator_exists = true;
+
+                        std::size_t v_degree = get_edges(neighbors_i, gbn);
+                        if (v_degree < min_degree) {
+                            min_degree = v_degree;
+                            min_degree_neighbors = neighbors_i;
+                        }
+                        break; // for efficiency
+                    }
+                }
+            }
+        }
+    }*/
+
+    if (!terminator_exists && !no_input_exists && !loops_exist && !diagonal_vertices_exist) {
         for (auto v : nodes) {
             auto neighbors_v = neighbors(v, g); //this checks all vertex pairs at least twice
 
             for (auto neighbor_v : neighbors_v) {
                 std::vector<Vertex> neighbors_i = {v, neighbor_v};
 
-                if(path_closing(gbn, neighbors_i).size() == 2) {
-                    std::size_t v_degree = all_edges(neighbors_i, g).size();
-                    if (v_degree < min_degree) {
-                        min_degree = v_degree;
-                        min_degree_neighbors = neighbors_i;
-                    }
+                std::size_t v_degree = get_edges(neighbors_i, gbn);
+                if (v_degree < min_degree) {
+                    min_degree = v_degree;
+                    min_degree_neighbors = neighbors_i;
                 }
             }
         }
@@ -237,27 +366,27 @@ GBN node_elimination(GBN& gbn, std::vector<Vertex> nodes) {
 void find_relevant_nodes(GBN gbn, std::set<Vertex>& nodes, std::vector<Vertex>& nodes_to_be_explored) {
     auto g = gbn.graph;
     auto nodes_copy = nodes;
+    std::vector<Vertex> nodes_to_be_explored_new;
 
     for(auto n : nodes_to_be_explored) {
         if(type(n, g) == NODE) nodes.insert(n);
-        nodes_to_be_explored.erase(remove(nodes_to_be_explored.begin(), nodes_to_be_explored.end(), n),
-                                   nodes_to_be_explored.end());
         auto neighbors_n  = all_neighbors(n, g);
         for(auto neighbor : neighbors_n) {
-            if(!is_in(neighbor, nodes) && !is_in(neighbor, nodes_to_be_explored) && type(neighbor, g) == NODE) {
-                nodes_to_be_explored.push_back(neighbor);
+            if(!is_in(neighbor, nodes) && !is_in(neighbor, nodes_to_be_explored_new) && type(neighbor, g) == NODE) {
+                nodes_to_be_explored_new.push_back(neighbor);
             }
         }
     }
-    if(nodes_to_be_explored.empty()) {
+    if(nodes_to_be_explored_new.empty()) {
         return;
     } else {
-        find_relevant_nodes(gbn, nodes, nodes_to_be_explored);
+        find_relevant_nodes(gbn, nodes, nodes_to_be_explored_new);
     }
 }
 
 MatrixPtr evaluate_stepwise(const GBN &gbn) {
     auto gbn_result = gbn;
+    int index = 0;
 
     bool changed = false;
     do {
@@ -267,7 +396,7 @@ MatrixPtr evaluate_stepwise(const GBN &gbn) {
         for (auto v : inside_vertices(gbn_result)) {
 
             bool has_successors = false;
-            for (auto e : boost::make_iterator_range(boost::out_edges(v, g))) {
+            for (auto e : boost::make_iterator_range(boost::out_edges(v, g))) { //use neighbor function
                 if (type(boost::target(e, g), g) != OUTPUT) {
                     has_successors = true;
                     break;
@@ -288,6 +417,13 @@ MatrixPtr evaluate_stepwise(const GBN &gbn) {
 
         if(!nodes.empty()) {
             gbn_result  = node_elimination(gbn_result, nodes);
+
+            std::ofstream f1("Evaluation-step"+std::to_string(index)+".dot");
+            draw_gbn_graph(f1, gbn_result, "");
+            std::ofstream f("Evaluation-step.dot");
+            draw_gbn_graph(f, gbn_result, "");
+            index++;
+
             changed = true;
         } else {
             changed = false;
@@ -311,7 +447,7 @@ MatrixPtr evaluate_stepwise(const GBN &gbn) {
 MatrixPtr evaluate_specific_place(std::size_t place, const GBN &gbn_og) {
     auto gbn = gbn_og;
     auto &g = gbn.graph;
-    auto& output_vertices = ::output_vertices(gbn);
+    auto output_vertices = ::output_vertices(gbn);
 
     std::vector<Vertex> chosen_output;
     chosen_output.push_back(output_vertices[place]);
@@ -339,5 +475,10 @@ MatrixPtr evaluate_specific_place(std::size_t place, const GBN &gbn_og) {
     std::vector<Vertex> relevant_nodes_vector (relevant_nodes.begin(), relevant_nodes.end());
 
     auto sub_gbn = SubGBN::make_from_vertices(gbn, relevant_nodes_vector);
+
+    std::string s = "";
+    //merge_F_matrices_to_diagonal_matrix(sub_gbn.gbn, inside_vertices(sub_gbn.gbn)[30], s);
+    std::cout << s << std::endl;
+
     return evaluate_stepwise(sub_gbn.gbn);
 }

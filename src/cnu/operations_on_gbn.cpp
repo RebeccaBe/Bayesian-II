@@ -194,7 +194,7 @@ void successp_op(const std::vector<std::vector<std::size_t>> pre_places, const s
 
         std::size_t y_wire = 0;
         while (y_wire < size_n){
-            if(is_in(y_wire, involved_wires_pre)) {
+            if(is_in(y_wire, involved_wires_pre)) { //involved wires will get skipped (we don't want them to have any other values than 0!)
                 y_wire++;
                 continue;
             } else {
@@ -240,6 +240,82 @@ void successp_op(const std::vector<std::vector<std::size_t>> pre_places, const s
 
         i_place++;
 	}
+}
+
+
+
+void failp_op(const std::vector<std::vector<std::size_t>> pre_places, const std::vector<double> probabilities, GBN& gbn) {
+    double sum = 0;
+    for(auto p : probabilities) {
+        sum += p;}
+    if(sum-1 > 0.001 || 1-sum > 0.001)
+        throw std::logic_error(std::string("Probabilities do not add up to 1. Instead the sum equals " + std::to_string(sum)));
+
+    std::set<std::size_t> all_pre_places;
+    for(auto pre : pre_places)
+        all_pre_places.insert(pre.begin(), pre.end());
+
+    std::map<std::size_t, std::size_t> mapping_place_key;
+    std::size_t index = 0;
+    for(auto place : all_pre_places) {
+        mapping_place_key.insert(std::pair<std::size_t, std::size_t>(place, index));
+        index++;
+    }
+
+    std::size_t size_n = all_pre_places.size();
+    auto matrix = std::make_shared<DiagonalMatrix>(size_n);
+    matrix->is_stochastic = false;
+
+    for(std::size_t i = 0; i < probabilities.size(); i++){
+        double p = probabilities[i];
+        BitVec assignment(0);
+        std::vector<std::size_t> involved_wires;
+
+        for(auto pre : pre_places[i])
+            involved_wires.push_back(mapping_place_key.at(pre));
+
+        matrix->add(assignment, assignment, p); //(0...0|0...0)
+
+        std::size_t wire = 0;
+        while (wire < size_n){
+            if(is_in(wire, involved_wires)) { //involved wires will get skipped (we don't want them to have any other values than 0!)
+                wire++;
+                continue;
+            } else {
+                assignment.flip(wire);
+            }
+
+            if (!assignment.test(wire)) wire++;
+            else {
+                matrix->add(assignment,assignment,p);
+                wire = 0;
+            }
+        }
+    }
+
+    auto& g = gbn.graph;
+    auto& output_vertices = ::output_vertices(gbn);
+
+    auto v_matrix = add_vertex(gbn, matrix, std::string("failp"));
+    std::size_t i_place = 0;
+    for(auto p : all_pre_places) {
+        // get predecessor of output port
+        auto tmp_in_edges = boost::in_edges(output_vertices[p], g);
+        if(std::distance(tmp_in_edges.first, tmp_in_edges.second) != 1)
+            throw std::logic_error(std::string("Place ") + std::to_string(p) + " has none or more than one precessor");
+
+        auto e_pre = *(tmp_in_edges.first);
+        auto e_pos = get(edge_position, g, e_pre);
+        auto v_pre = boost::source(e_pre, g);
+
+        auto e_to_matrix = boost::add_edge(v_pre, v_matrix, g).first;
+        put(edge_position, g, e_to_matrix, std::pair<std::size_t, std::size_t>{ e_pos.first, i_place });
+        auto e_from_matrix = boost::add_edge(v_matrix, output_vertices[p], g).first;
+        put(edge_position, g, e_from_matrix, std::pair<std::size_t, std::size_t>{ i_place, 0 });
+        boost::remove_edge(v_pre, output_vertices[p], g);
+
+        i_place++;
+    }
 }
 
 void successStoch_op(const std::vector<std::vector<std::size_t>> pre_places, const std::vector<std::vector<std::size_t>> post_places,

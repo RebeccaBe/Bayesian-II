@@ -92,8 +92,42 @@ void fire_with_probability_on_gbn (CN& cn, GBN& gbn, std::vector<std::pair<std::
         const auto& transition = cn.transitions[i_transition.first];
         if(check_pre_condition(transition, cn.m)) valid_transitions.push_back(i_transition);
     }
+
     if(valid_transitions.empty()) {
-        std::cout << "successp: None of the transitions can be fired." << std::endl;
+
+        if(transitions.size() == 1) {
+            const auto& transition = cn.transitions[transitions[0].first];
+            const auto& pre_places = transition.pre;
+
+            nassert_op(pre_places,1, gbn);
+            check_gbn_integrity(gbn);
+            if(status_callback)
+                status_callback(std::string("fail_{t")+std::to_string(transitions[0].first)+"}", std::string("nassert_pre"));
+
+            return;
+        }
+
+        std::vector<double> probabilities;
+        std::vector<std::vector<std::size_t>> all_pre_places;
+        std::string transitions_string = "";
+
+        for(auto [i_transition, probability] : transitions) {
+            const auto transition = cn.transitions[i_transition];
+
+            probabilities.push_back(probability);
+            all_pre_places.push_back(transition.pre);
+            if(status_callback) {
+                std::stringstream ss;
+                ss << "t" << i_transition << ": " << probability << ", ";
+                transitions_string.append(ss.str());
+            }
+        }
+
+        auto& pre_places = all_pre_places;
+        failp_op(pre_places, probabilities, gbn);
+        check_gbn_integrity(gbn);
+        if(status_callback) status_callback(std::string("fail_p{")+ transitions_string +"}", std::string("fail_p"));
+
         return;
     }
 
@@ -158,22 +192,6 @@ void fire_with_probability_on_gbn (CN& cn, GBN& gbn, std::vector<std::pair<std::
 
 	// update marking in CNU
 	if(!valid_transitions.empty()){
-	    /*std::random_device rd;
-        std::mt19937 mt(rd());
-
-        double normalization = 0;
-        for(auto t : valid_transitions) normalization += t.second;
-
-        std::uniform_real_distribution<double> rand_transition_0_1(0, 1);
-        auto chosen_transition_p = rand_transition_0_1(mt);
-
-        double sum = 0;
-        std::size_t index = 0;
-        while(sum <= chosen_transition_p) {
-            sum += (probabilities[index] / normalization);
-            index++;
-        }*/
-
         const auto& transition = cn.transitions[chosen_transition];
         for(const auto& p : transition.pre)
             cn.m.at(p) = 0;

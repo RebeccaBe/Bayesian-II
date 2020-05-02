@@ -12,6 +12,8 @@ Vertex merge_vertices(GBN& gbn, std::vector<Vertex> vertices, std::string new_no
 	auto sub_gbn = SubGBN::make_from_vertices(gbn, vertices);
 	auto p_m = evaluate(sub_gbn.gbn);
 
+	if(p_m->type == DIAGONAL) new_node_label = "diag";
+
 	for(auto v : vertices)
 		remove_vertex(v, gbn);
 
