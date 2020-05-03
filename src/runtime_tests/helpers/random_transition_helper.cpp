@@ -86,16 +86,6 @@ std::vector<std::pair<std::size_t, double>> RandomTransitionHelper::next_from_bu
     if(type != PROBABILITY)
         throw std::logic_error("Wrong transition type, cannot perform probability operation.");
 
-    /*std::vector<std::vector<std::pair<std::size_t, double>>> bubbles_w_valid_transitions;
-    for(auto i_bubble : transition_bubbles) {
-        for(auto [i_transition, p] : i_bubble) {
-            if(check_pre_condition(cn.transitions[i_transition], cn.m)) {
-                bubbles_w_valid_transitions.push_back(i_bubble);
-                break; //for efficiency
-            }
-        }
-    }*/
-
     std::shuffle(transition_bubbles.begin(), transition_bubbles.end(), mt);
     return  transition_bubbles[0];
 }
@@ -132,12 +122,12 @@ std::size_t RandomTransitionHelper::choose_transition (CN& cn, std::vector<std::
     return valid_transitions[index-1].first;
 }
 
-std::vector<std::vector<std::pair<std::size_t, double>>> RandomTransitionHelper::make_transitions_w_probabilities(std::mt19937& mt) { //new class for this?
+std::vector<std::vector<std::pair<std::size_t, double>>> RandomTransitionHelper::make_transitions_w_probabilities(std::mt19937& mt, double percentage) { //new class for this?
     std::vector<std::vector<std::pair<std::size_t, double>>> transitions_w_probabilities_bubbles;
 
     if(type != PROBABILITY) return transitions_w_probabilities_bubbles;
 
-    for(std::size_t i_bubble = 0; i_bubble < cn.transitions.size()/3; i_bubble++) {
+    for(std::size_t i_bubble = 0; i_bubble < cn.transitions.size()*percentage; i_bubble++) {
         std::vector<std::pair<std::size_t, double>> i_bubble_vec;
 
         std::vector<std::size_t> chosen_transitions;

@@ -115,6 +115,19 @@ void nassert_op(const std::vector<std::size_t> places, bool b, JointDist& dist)
 			t.second = t.second/(1-sum);
 }
 
+void nassert_non_norm_op(const std::vector<std::size_t> places, bool b, JointDist& dist)
+{
+    double sum = 0;
+    for(auto& [marking,p] : dist)
+    {
+        auto target = build_target_marking(marking, places, b);
+        if(target == marking)
+        {
+            p = 0;
+        }
+    }
+}
+
 void successp_op(const std::vector<std::vector<std::size_t>> pre_places, const std::vector<std::vector<std::size_t>> post_places,
 				const std::vector<double> probabilities, JointDist& dist) {
 
@@ -139,6 +152,29 @@ void successp_op(const std::vector<std::vector<std::size_t>> pre_places, const s
 	}
 
 	normalize_op(dist);
+}
+
+void failp_op(const std::vector<std::vector<std::size_t>> pre_places, const std::vector<double> probabilities, JointDist& dist) {
+
+    double sum = 0;
+    for(auto p : probabilities) sum += p;
+    if(sum-1 > 0.001 || 1-sum > 0.001)
+        throw std::logic_error(std::string("Probabilities do not add up to 1. Instead the sum equals " + std::to_string(sum)));
+
+
+    auto original_dist = dist;
+    for (auto& [marking,p] : dist) {dist[marking] = 0;}
+
+    for(std::size_t i = 0; i < probabilities.size(); i++) {
+        double probability = probabilities[i];
+
+        auto worker_dist = original_dist;
+        nassert_non_norm_op(pre_places[i], 1, worker_dist);
+
+        for (auto& [marking,p] : dist) p += (worker_dist.at(marking) * probability);
+    }
+
+    normalize_op(dist);
 }
 
 void successStoch_op(const std::vector<std::vector<std::size_t>> pre_places, const std::vector<std::vector<std::size_t>> post_places,

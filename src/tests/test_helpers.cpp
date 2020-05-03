@@ -184,6 +184,28 @@ void test_joint_dist_matrix_equal(const JointDist& joint_dist, const Matrix& m)
 		REQUIRE(m.get(to, 0) == Approx(joint_dist_ordered[to].second));
 }
 
+void test_joint_dist_matrix_equal_marginal_prob(const JointDist& joint_dist, const Matrix& m, std::size_t place)
+{
+    if(m.n != 0)
+        throw std::logic_error("Cannot compare joint dist with matrix with n != 0");
+
+    std::vector<std::pair<std::vector<bool>, double>> joint_dist_ordered;
+    for(auto t : joint_dist)
+        joint_dist_ordered.push_back(t);
+
+    std::sort(joint_dist_ordered.begin(), joint_dist_ordered.end(), [](const auto& p1, const auto& p2) { return bool_vector_reverse_compare(p1.first, p2.first); });
+
+    unsigned long long to_max = joint_dist_ordered.size();
+    std::size_t matrix_max = (log10(to_max))/(log10(2));
+    MatrixPtr matrix = std::make_shared<DynamicMatrix>(matrix_max,0);
+
+    for(Index to = 0; to < to_max; to++) {
+        matrix->set(to, 0, joint_dist_ordered[to].second);
+    }
+
+    test_matrices_equal_marginal_prob(*matrix, m, place);
+}
+
 bool check_joint_dist_matrix_equal(const JointDist& joint_dist, const Matrix& m)
 {
 	if(m.n != 0)

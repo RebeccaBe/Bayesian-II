@@ -117,6 +117,49 @@ void setp_op(const std::vector<std::size_t> places, double p, GBN& gbn) //p repr
 	}
 }
 
+bool validate_transition(std::vector<std::size_t> places, bool condition, GBN& gbn) {
+    auto& g = gbn.graph;
+    auto& output_vertices = ::output_vertices(gbn);
+
+    for(auto p : places) {
+        auto tmp_in_edges = boost::in_edges(output_vertices[p], g);
+        if(std::distance(tmp_in_edges.first, tmp_in_edges.second) != 1)
+            throw std::logic_error(std::string("Place ") + std::to_string(p) + " has none or more than one precessor");
+        auto v_pre = boost::source(*(tmp_in_edges.first), g);
+        auto matrix_v_pre = matrix(v_pre, g);
+        if(matrix_v_pre->type == ONE_B) {
+            auto& one_matrix = dynamic_cast<OneBMatrix&>(*matrix(v_pre,g));
+            if (one_matrix.b != condition){
+                return false;
+            }
+        }
+    }
+    return true;
+}
+
+bool validate_transition_fail(std::vector<std::size_t> pre_places, GBN& gbn) {
+    auto& g = gbn.graph;
+    auto& output_vertices = ::output_vertices(gbn);
+    bool transition_can_fail = false;
+
+    for(auto p : pre_places) {
+        auto tmp_in_edges = boost::in_edges(output_vertices[p], g);
+        if(std::distance(tmp_in_edges.first, tmp_in_edges.second) != 1)
+            throw std::logic_error(std::string("Place ") + std::to_string(p) + " has none or more than one precessor");
+        auto v_pre = boost::source(*(tmp_in_edges.first), g);
+        auto matrix_v_pre = matrix(v_pre, g);
+        if(matrix_v_pre->type == ONE_B) {
+            auto& one_matrix = dynamic_cast<OneBMatrix&>(*matrix(v_pre,g));
+            if (one_matrix.b == false){
+                transition_can_fail = true;
+            }
+        } else {
+            transition_can_fail = true;
+        }
+    }
+    return transition_can_fail;
+}
+
 void successp_op(const std::vector<std::vector<std::size_t>> pre_places, const std::vector<std::vector<std::size_t>> post_places,
                  const std::vector<double> probabilities, GBN& gbn) {
     double sum = 0;
@@ -251,8 +294,31 @@ void failp_op(const std::vector<std::vector<std::size_t>> pre_places, const std:
     if(sum-1 > 0.001 || 1-sum > 0.001)
         throw std::logic_error(std::string("Probabilities do not add up to 1. Instead the sum equals " + std::to_string(sum)));
 
+    std::size_t incorporated_transitions = 0;
+    std::vector<std::vector<std::size_t>> new_pre_places;
+    std::vector<double> new_probabilities;
+
+    //simplification measure
+    for(std::size_t i_transition = 0; i_transition < probabilities.size(); i_transition++) {
+        bool valid_pre = validate_transition_fail(pre_places[i_transition], gbn); //test if transition could fail
+        if(valid_pre) {
+            new_pre_places.push_back(pre_places[i_transition]);
+            new_probabilities.push_back(probabilities[i_transition]);
+            incorporated_transitions++;
+        }
+    }
+
+    if(incorporated_transitions == 0)
+        return;
+    else if(incorporated_transitions == 1) {
+        nassert_op(new_pre_places[0],1, gbn);
+        check_gbn_integrity(gbn);
+
+        return;
+    }
+
     std::set<std::size_t> all_pre_places;
-    for(auto pre : pre_places)
+    for(auto pre : new_pre_places)
         all_pre_places.insert(pre.begin(), pre.end());
 
     std::map<std::size_t, std::size_t> mapping_place_key;
@@ -261,6 +327,10 @@ void failp_op(const std::vector<std::vector<std::size_t>> pre_places, const std:
         mapping_place_key.insert(std::pair<std::size_t, std::size_t>(place, index));
         index++;
     }
+
+    double normalize = 0;
+    for(auto p : new_probabilities)
+        normalize += p;
 
     std::size_t size_n = all_pre_places.size();
     auto matrix = std::make_shared<DiagonalMatrix>(size_n);
@@ -278,16 +348,18 @@ void failp_op(const std::vector<std::vector<std::size_t>> pre_places, const std:
 
         std::size_t wire = 0;
         while (wire < size_n){
-            if(is_in(wire, involved_wires)) { //involved wires will get skipped (we don't want them to have any other values than 0!)
-                wire++;
-                continue;
-            } else {
-                assignment.flip(wire);
-            }
+            assignment.flip(wire);
 
             if (!assignment.test(wire)) wire++;
             else {
-                matrix->add(assignment,assignment,p);
+                bool all_bits_one = true;
+                for(auto involved_wire : involved_wires) {
+                    if(!assignment.test(involved_wire)) {
+                        all_bits_one = false;
+                    }
+                }
+                if (!all_bits_one) //add matrix entry at the position, where at least one pre place is empty
+                    matrix->add(assignment,assignment,p);
                 wire = 0;
             }
         }
@@ -488,24 +560,4 @@ void normalize_matrix_rows(MatrixPtr matrix) {
                     matrix->set(i_row, i_col, old_val / row_sum);
             }
     }
-}
-
-bool validate_transition(std::vector<std::size_t> places, bool condition, GBN& gbn) {
-	auto& g = gbn.graph;
-	auto& output_vertices = ::output_vertices(gbn);
-
-	for(auto p : places) {
-		auto tmp_in_edges = boost::in_edges(output_vertices[p], g);
-		if(std::distance(tmp_in_edges.first, tmp_in_edges.second) != 1)
-			throw std::logic_error(std::string("Place ") + std::to_string(p) + " has none or more than one precessor");
-		auto v_pre = boost::source(*(tmp_in_edges.first), g);
-		auto matrix_v_pre = matrix(v_pre, g);
-		if(matrix_v_pre->type == ONE_B) {
-			auto& one_matrix = dynamic_cast<OneBMatrix&>(*matrix(v_pre,g));
-			if (one_matrix.b != condition){
-				return false;
-			}
-		}
-	}
-	return true;
 }

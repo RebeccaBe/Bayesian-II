@@ -19,6 +19,7 @@ void test_matrices_equal_marginal_prob(const Matrix& m1, const Matrix& m2, std::
 
 void test_joint_dist_matrix_equal(const JointDist& joint_dist, const Matrix& m);
 bool check_joint_dist_matrix_equal(const JointDist& joint_dist, const Matrix& m);
+void test_joint_dist_matrix_equal_marginal_prob(const JointDist& joint_dist, const Matrix& m, std::size_t place);
 
 void compare_joint_dists(const JointDist& dist1, const JointDist& dist2);
 

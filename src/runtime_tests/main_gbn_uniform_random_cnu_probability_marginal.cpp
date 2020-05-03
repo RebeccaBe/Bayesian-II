@@ -99,7 +99,7 @@ int main(int argc, const char** argv)
 
 			auto gbn = build_uniform_independent_obn(n_places);
 			auto rand_transition_helper = RandomTransitionHelper(cn, RandomTransitionHelper::PROBABILITY, 1, cn_params.N_MAX_TRANSITIONS_PER_OP);
-            rand_transition_helper.transition_bubbles = rand_transition_helper.make_transitions_w_probabilities(mt);
+            rand_transition_helper.transition_bubbles = rand_transition_helper.make_transitions_w_probabilities(mt,0.3);
 
             std::string operation;
 
@@ -118,9 +118,6 @@ int main(int argc, const char** argv)
 					draw_gbn_graph(f, gbn, std::to_string(i_fire));
 				}
 			}
-            std::ofstream f("example.gbn");
-            write_gbn(f, gbn);
-
 
 			evaluate_specific_place(0, gbn);
 

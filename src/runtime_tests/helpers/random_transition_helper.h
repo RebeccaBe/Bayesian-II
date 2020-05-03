@@ -35,6 +35,6 @@ struct RandomTransitionHelper
     std::vector<std::pair<std::size_t, double>> next_from_bubbles(std::mt19937& mt);
     std::size_t choose_transition (CN& cn, std::vector<std::pair<std::size_t, double>> transitions_w_probabilities);
 
-    std::vector<std::vector<std::pair<std::size_t, double>>> make_transitions_w_probabilities(std::mt19937& mt);
+    std::vector<std::vector<std::pair<std::size_t, double>>> make_transitions_w_probabilities(std::mt19937& mt, double percentage);
 
 };

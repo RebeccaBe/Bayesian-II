@@ -83,7 +83,7 @@ MatrixPtr evaluate(const GBN &gbn) {
     m->add(*wire_structure.output_bitvec, *wire_structure.input_bitvec, product);
 
     std::size_t i_wire = 0;
-    std::cout << "number of independent wires:" << std::count_if(wires.begin(), wires.end(), [](Wire w){return w.independent;}) << std::endl;
+    //std::cout << "number of independent wires:" << std::count_if(wires.begin(), wires.end(), [](Wire w){return w.independent;}) << std::endl;
     const std::size_t max_i_wire = wires.size();
 
     std::set<Vertex> affected_vertices; // TODO: optimization: replace this with flat set
@@ -305,7 +305,7 @@ GBN node_elimination(GBN& gbn, std::vector<Vertex> nodes) {
 
     //Are their loops between 2 nodes? Eliminate that next
     bool loops_exist = false;
-    /*if(!terminator_exists && !no_input_exists && !diagonal_vertices_exist) {
+    if(!terminator_exists && !no_input_exists && !diagonal_vertices_exist) {
         for(auto v : nodes) {
             if(n(v,g) > 0 && m(v,g) > 0) {
                 std::set<Vertex> successors, predecessors;
@@ -332,7 +332,7 @@ GBN node_elimination(GBN& gbn, std::vector<Vertex> nodes) {
                 }
             }
         }
-    }*/
+    }
 
     if (!terminator_exists && !no_input_exists && !loops_exist && !diagonal_vertices_exist) {
         for (auto v : nodes) {
@@ -418,11 +418,11 @@ MatrixPtr evaluate_stepwise(const GBN &gbn) {
         if(!nodes.empty()) {
             gbn_result  = node_elimination(gbn_result, nodes);
 
-            std::ofstream f1("Evaluation-step"+std::to_string(index)+".dot");
-            draw_gbn_graph(f1, gbn_result, "");
-            std::ofstream f("Evaluation-step.dot");
-            draw_gbn_graph(f, gbn_result, "");
-            index++;
+            //std::ofstream f1("Evaluation-step"+std::to_string(index)+".dot");
+            //draw_gbn_graph(f1, gbn_result, "");
+            //std::ofstream f("Evaluation-step.dot");
+            //draw_gbn_graph(f, gbn_result, "");
+            //index++;
 
             changed = true;
         } else {
@@ -448,6 +448,10 @@ MatrixPtr evaluate_specific_place(std::size_t place, const GBN &gbn_og) {
     auto gbn = gbn_og;
     auto &g = gbn.graph;
     auto output_vertices = ::output_vertices(gbn);
+
+    if(place > output_vertices.size())
+        throw std::logic_error(std::string("The chosen place " + std::to_string(place) + " doesn't exist in the given network."));
+
 
     std::vector<Vertex> chosen_output;
     chosen_output.push_back(output_vertices[place]);
@@ -475,10 +479,6 @@ MatrixPtr evaluate_specific_place(std::size_t place, const GBN &gbn_og) {
     std::vector<Vertex> relevant_nodes_vector (relevant_nodes.begin(), relevant_nodes.end());
 
     auto sub_gbn = SubGBN::make_from_vertices(gbn, relevant_nodes_vector);
-
-    std::string s = "";
-    //merge_F_matrices_to_diagonal_matrix(sub_gbn.gbn, inside_vertices(sub_gbn.gbn)[30], s);
-    std::cout << s << std::endl;
 
     return evaluate_stepwise(sub_gbn.gbn);
 }

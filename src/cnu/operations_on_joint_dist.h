@@ -9,8 +9,10 @@ void assert_op(const std::vector<std::size_t> places, bool b, JointDist& dist);
 void nassert_op(const std::vector<std::size_t> places, bool b, JointDist& dist);
 void successp_op(const std::vector<std::vector<std::size_t>> pre_places, const std::vector<std::vector<std::size_t>> post_places,
                 const std::vector<double> probabilities, JointDist& dist);
+void failp_op(const std::vector<std::vector<std::size_t>> pre_places, const std::vector<double> probabilities, JointDist& dist);
 void successStoch_op(const std::vector<std::vector<std::size_t>> pre_places, const std::vector<std::vector<std::size_t>> post_places,
                  const std::vector<double> probabilities, JointDist& dist);
 
 void assert_non_norm_op(const std::vector<std::size_t> places, bool b, JointDist& dist);
+void nassert_non_norm_op(const std::vector<std::size_t> places, bool b, JointDist& dist);
 void normalize_op(JointDist& dist);

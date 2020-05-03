@@ -178,12 +178,13 @@ TEST_CASE("CNU probability ops on joint dist and GBN should lead to same dist")
 	auto gbn = build_uniform_independent_obn(n_places);
 	auto joint_dist = build_uniform_joint_dist(n_places);
 	auto rand_transition_helper = RandomTransitionHelper(cn, RandomTransitionHelper::PROBABILITY, 1, 2);
+    rand_transition_helper.transition_bubbles = rand_transition_helper.make_transitions_w_probabilities(mt, 0.5);
 
 	for(std::size_t i_simplification_step = 0; i_simplification_step < n_simplification_steps; i_simplification_step++)
 	{
 		for(std::size_t i_rand_transition = 0; i_rand_transition < n_random_transitions_per_simplify; i_rand_transition++)
 		{
-			auto i_transition = rand_transition_helper.next_p(mt);
+			auto i_transition = rand_transition_helper.next_from_bubbles(mt);
 			auto chosen_transition = rand_transition_helper.choose_transition(cn, i_transition);
 			fire_with_probability_on_gbn(cn, gbn, i_transition, chosen_transition);
 			fire_with_probability_on_joint_dist(cn_copy, joint_dist, i_transition, chosen_transition);
@@ -200,7 +201,7 @@ TEST_CASE("CNU stochastic ops on joint dist and GBN should lead to same dist")
 {
     std::size_t n_places = 10;
     std::size_t n_transitions = 30;
-    std::size_t n_min_tokens = 10;
+    std::size_t n_min_tokens = 5;
     std::size_t n_max_tokens = 10;
     std::size_t n_min_pre_places = 1;
     std::size_t n_max_pre_places = 2;
@@ -219,12 +220,13 @@ TEST_CASE("CNU stochastic ops on joint dist and GBN should lead to same dist")
     auto gbn = build_uniform_independent_obn(n_places);
     auto joint_dist = build_uniform_joint_dist(n_places);
     auto rand_transition_helper = RandomTransitionHelper(cn, RandomTransitionHelper::PROBABILITY, 1, 2);
+    rand_transition_helper.transition_bubbles = rand_transition_helper.make_transitions_w_probabilities(mt, 0.5);
 
     for(std::size_t i_simplification_step = 0; i_simplification_step < n_simplification_steps; i_simplification_step++)
     {
         for(std::size_t i_rand_transition = 0; i_rand_transition < n_random_transitions_per_simplify; i_rand_transition++)
         {
-            auto i_transition = rand_transition_helper.next_p(mt);
+            auto i_transition = rand_transition_helper.next_from_bubbles(mt);
             auto chosen_transition = rand_transition_helper.choose_transition(cn, i_transition);
 
             fire_with_probabilityStoch_on_gbn(cn, gbn, i_transition, chosen_transition);
@@ -234,6 +236,7 @@ TEST_CASE("CNU stochastic ops on joint dist and GBN should lead to same dist")
         simplification(gbn);
         check_gbn_integrity(gbn);
         auto p_m = evaluate(gbn);
+
         test_joint_dist_matrix_equal(joint_dist, *p_m);
     }
 }
