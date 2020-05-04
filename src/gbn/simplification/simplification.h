@@ -6,6 +6,7 @@
 void simplification(GBN& gbn, std::function<void(const GBN&,std::string)> status_callback = std::function<void(const GBN&,std::string)>());
 void non_normalizing_simplification(GBN& gbn, std::function<void(const GBN&,std::string)> status_callback = std::function<void(const GBN&,std::string)>());
 void old_simplification(GBN& gbn, std::function<void(const GBN&,std::string)> status_callback = std::function<void(const GBN&,std::string)>());
+void local_simplification(GBN& gbn, std::function<void(const GBN&,std::string)> status_callback = std::function<void(const GBN&,std::string)>());
 
 
 template<typename ...Functions>

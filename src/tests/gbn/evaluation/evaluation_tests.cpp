@@ -265,7 +265,7 @@ TEST_CASE("The step-wise evaluation should yield the same result.")
 }
 
 TEST_CASE("test") {
-    auto gbn = read_and_check_gbn(TEST_INSTANCE_FOLDER + "example.gbn");
+    auto gbn = read_and_check_gbn(TEST_INSTANCE_FOLDER + "example_10_places.gbn");
 
     auto start_time_gbn = std::chrono::steady_clock::now();
 

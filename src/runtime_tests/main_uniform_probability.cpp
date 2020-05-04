@@ -169,7 +169,6 @@ int main(int argc, const char** argv)
             std::vector<std::vector<std::pair<std::size_t, double>>> i_transitions;
 
             auto gbn = build_uniform_independent_obn(n_places);
-            auto joint_dist = build_uniform_joint_dist(n_places);
             auto rand_transition_helper = RandomTransitionHelper(cn, RandomTransitionHelper::PROBABILITY, 1, cn_params.N_MAX_TRANSITIONS_PER_OP);
             rand_transition_helper.transition_bubbles = rand_transition_helper.make_transitions_w_probabilities(mt,1);
 
@@ -198,6 +197,7 @@ int main(int argc, const char** argv)
             auto end_time_gbn = std::chrono::steady_clock::now();
 
 
+            auto joint_dist = build_uniform_joint_dist(n_places);
             auto start_time_dist = std::chrono::steady_clock::now();
             for(std::size_t i_fire = 0; i_fire < cn_params.N_TRANSITIONS_PER_RUN; i_fire++) {
                 if(is_detailed)
@@ -213,6 +213,7 @@ int main(int argc, const char** argv)
 
             double diff_milliseconds_gbn = std::chrono::duration<double, std::milli>(end_time_gbn-start_time_gbn).count();
             double diff_milliseconds_dist = std::chrono::duration<double, std::milli>(end_time_dist-start_time_dist).count();
+
 
             csv_file << n_places << ";" << diff_milliseconds_gbn << ";" << diff_milliseconds_dist << std::endl;
         }

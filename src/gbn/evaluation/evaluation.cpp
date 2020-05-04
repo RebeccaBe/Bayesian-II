@@ -305,7 +305,7 @@ GBN node_elimination(GBN& gbn, std::vector<Vertex> nodes) {
 
     //Are their loops between 2 nodes? Eliminate that next
     bool loops_exist = false;
-    if(!terminator_exists && !no_input_exists && !diagonal_vertices_exist) {
+    /*if(!terminator_exists && !no_input_exists && !diagonal_vertices_exist) {
         for(auto v : nodes) {
             if(n(v,g) > 0 && m(v,g) > 0) {
                 std::set<Vertex> successors, predecessors;
@@ -332,7 +332,7 @@ GBN node_elimination(GBN& gbn, std::vector<Vertex> nodes) {
                 }
             }
         }
-    }
+    }*/
 
     if (!terminator_exists && !no_input_exists && !loops_exist && !diagonal_vertices_exist) {
         for (auto v : nodes) {

@@ -55,7 +55,7 @@ std::vector<std::pair<std::size_t, double>> RandomTransitionHelper::next_p(std::
 	auto n_transitions = rand_n_transitions(mt);
     if(n_transitions > cn.transitions.size()) n_transitions=cn.transitions.size();
 
-    /*auto i_valid_transitions = get_valid_transitions(cn);
+    auto i_valid_transitions = get_valid_transitions(cn);
     std::shuffle(i_valid_transitions.begin(), i_valid_transitions.end(),mt);
     std::size_t valid_transition = i_valid_transitions.at(0); //guarantee one valid transition
 
@@ -63,9 +63,10 @@ std::vector<std::pair<std::size_t, double>> RandomTransitionHelper::next_p(std::
     rest_transitions.erase(rest_transitions.begin()+valid_transition);
     std::shuffle(rest_transitions.begin(), rest_transitions.end(),mt);
     auto chosen_transitions = std::vector<std::size_t>(rest_transitions.begin(), rest_transitions.begin()+n_transitions-1);
-    chosen_transitions.push_back(valid_transition);*/
+    chosen_transitions.push_back(valid_transition);
+
     std::shuffle(i_transitions.begin(), i_transitions.end(),mt);
-    auto chosen_transitions = std::vector<std::size_t>(i_transitions.begin(), i_transitions.begin() + n_transitions);
+    chosen_transitions = std::vector<std::size_t>(i_transitions.begin(), i_transitions.begin() + n_transitions);
 
 	std::vector<double> probabilities;
     for(std::size_t i = 0; i < n_transitions-1; i++)

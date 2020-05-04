@@ -109,6 +109,8 @@ SubGBN SubGBN::make_from_vertices(const GBN& gbn, std::vector<Vertex> inside_ver
 	for(auto v : inside_vertices)
 	{
 		put(vertex_matrix, g_local, global_to_local_vertex_map.at(v), matrix(v,g_global));
+        if(matrix(v,g_global)-> type == DIAGONAL || matrix(v,g_global)-> type == F)
+            put(vertex_name, g_local, global_to_local_vertex_map.at(v), "diag");
 
 		for(auto e : boost::make_iterator_range(boost::out_edges(v,g_global)))
 		{

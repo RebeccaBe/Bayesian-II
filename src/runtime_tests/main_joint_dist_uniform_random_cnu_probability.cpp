@@ -98,6 +98,8 @@ int main(int argc, const char** argv)
 
 			auto joint_dist = build_uniform_joint_dist(n_places);
 			auto rand_transition_helper = RandomTransitionHelper(cn, RandomTransitionHelper::PROBABILITY, 1, cn_params.N_MAX_TRANSITIONS_PER_OP);
+            rand_transition_helper.transition_bubbles = rand_transition_helper.make_transitions_w_probabilities(mt,0.3);
+
 
             std::string operation;
 
@@ -105,7 +107,7 @@ int main(int argc, const char** argv)
 			for(std::size_t i_fire = 0; i_fire < cn_params.N_TRANSITIONS_PER_RUN; i_fire++) {
 				if(is_detailed)
 					std::cout << "i_fire: " << i_fire << std::endl;
-				auto i_transition = rand_transition_helper.next_p(mt);
+				auto i_transition = rand_transition_helper.next_from_bubbles(mt);
                 auto chosen_transition = rand_transition_helper.choose_transition(cn, i_transition);
 
 				auto callback = (is_detailed) ? [&operation](std::string high_level, std::string low_level) { std::cout << high_level << " " << low_level << std::endl; } : std::function<void(std::string,std::string)>();
