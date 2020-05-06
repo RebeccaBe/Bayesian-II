@@ -263,16 +263,3 @@ TEST_CASE("The step-wise evaluation should yield the same result.")
     test_matrices_equal_marginal_prob(*p_m3, *p_m, 3);
     test_matrices_equal_marginal_prob(*p_m4, *p_m, 4);
 }
-
-TEST_CASE("test") {
-    auto gbn = read_and_check_gbn(TEST_INSTANCE_FOLDER + "example_10_places.gbn");
-
-    auto start_time_gbn = std::chrono::steady_clock::now();
-
-    evaluate_specific_place(1,gbn);
-
-    auto end_time_gbn = std::chrono::steady_clock::now();
-    double diff_milliseconds_gbn = std::chrono::duration<double, std::milli>(end_time_gbn-start_time_gbn).count();
-
-    std::cout << diff_milliseconds_gbn << std::endl;
-}

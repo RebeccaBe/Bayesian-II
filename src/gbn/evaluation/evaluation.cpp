@@ -142,12 +142,13 @@ std::vector<Vertex> expand_list(GBN gbn, std::vector<Vertex> nodes) {
     auto g = gbn.graph;
 
     std::vector<Vertex> expanded_list = nodes;
-    std::vector<Vertex> neighbors_v;
+    std::set<Vertex> neighbors_v;
     bool changed = false;
 
     for(auto n : nodes) {
-        auto neighbors_n = all_neighbors(n, g);
-        neighbors_v.insert(std::end(neighbors_v), std::begin(neighbors_n), std::end(neighbors_n));
+        for(auto neighbor : all_neighbors(n, g)) {
+            neighbors_v.insert(neighbor);
+        }
     }
 
     for(auto n : neighbors_v) {
@@ -155,21 +156,22 @@ std::vector<Vertex> expand_list(GBN gbn, std::vector<Vertex> nodes) {
 
             auto p_m = matrix(n, g);
              if(p_m->type == F || p_m->type == DIAGONAL) {
-                 bool all_input_edges_in_set, all_output_edges_in_set = true;
+                 bool all_input_edges_in_set = true;
+                 bool all_output_edges_in_set = true;
 
                  for(auto e : boost::make_iterator_range(boost::out_edges(n,g))) {
                      auto successor = boost::target(e, g);
                      if(!is_in(successor, nodes)) {
-                         all_input_edges_in_set = false;
+                         all_output_edges_in_set = false;
                          break;
                      }
                  }
 
-                 if(!all_input_edges_in_set)
+                 if(!all_output_edges_in_set)
                      for(auto e : boost::make_iterator_range(boost::in_edges(n,g))) {
                          auto predecessor = boost::source(e, g);
                          if(!is_in(predecessor, nodes)) {
-                             all_output_edges_in_set = false;
+                             all_input_edges_in_set = false;
                              break;
                          }
                      }
@@ -177,7 +179,6 @@ std::vector<Vertex> expand_list(GBN gbn, std::vector<Vertex> nodes) {
                  if((all_input_edges_in_set || all_output_edges_in_set) && !is_in(n, expanded_list)) {
                      expanded_list.push_back(n);
                      changed = true;
-                     continue;
                  }
              }
         }
@@ -387,7 +388,7 @@ void find_relevant_nodes(GBN gbn, std::set<Vertex>& nodes, std::vector<Vertex>& 
 
 MatrixPtr evaluate_stepwise(const GBN &gbn) {
     auto gbn_result = gbn;
-    int index = 0;
+    int index = 1;
 
     bool changed = false;
     do {
@@ -422,7 +423,7 @@ MatrixPtr evaluate_stepwise(const GBN &gbn) {
             if(debug_mode) {
                 std::ofstream f1("Evaluation-step" + std::to_string(index) + ".dot");
                 std::ofstream f("Evaluation-step.dot");
-                draw_gbn_graph(f1, gbn_result, "Evaluation step " + std::to_string(index++));
+                draw_gbn_graph(f1, gbn_result, "Evaluation step " + std::to_string(++index));
                 draw_gbn_graph(f, gbn_result, "");
             }
 
@@ -479,7 +480,7 @@ MatrixPtr evaluate_specific_place(std::size_t place, const GBN &gbn_og) {
     find_relevant_nodes(gbn, relevant_nodes, chosen_output);
     std::vector<Vertex> relevant_nodes_vector (relevant_nodes.begin(), relevant_nodes.end());
 
-    auto sub_gbn = SubGBN::make_from_vertices(gbn, relevant_nodes_vector, true);
+    auto sub_gbn = SubGBN::make_from_vertices(gbn, relevant_nodes_vector);
 
     if(debug_mode) {
         std::ofstream f("Evaluation-step0.dot");
