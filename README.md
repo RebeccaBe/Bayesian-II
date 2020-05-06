@@ -1,12 +1,31 @@
 # Updating Probabilistic Knowledge on Condition/Event Nets using Bayesian Networks
 
-This repository contains the implementation and experimental results for the article *"Updating Probabilistic Knowledge on Condition/Event Nets using Bayesian Networks"* submitted to *Concur '18*. 
+This repository contains the implementation and experimental results for the article *"Uncertainty Reasoning for Probabilistic Petri Nets via Bayesian
+Networks"* submitted to *Concur '20*. 
 
 ## Abstract 
-The paper extends Bayesian networks (BNs) by a mechanism for dynamic changes to the probability distributions represented by BNs. One application scenario is the process of knowledge acquisition of an observer interacting with a system. In particular, the paper considers condition/event nets where the observer’s knowledge about the current marking is a probability distribution over markings. The observer can interact with the net to deduce information about the marking by requesting certain transitions to fire and observing their success or failure. Aiming for an efficient implementation of dynamic changes to probability distributions of BNs, we consider a slightly more general class of networks that form the arrows of a free PROP with a commutative comonoid structure, also known as term graphs. The algebraic structure of such PROPs supplies us with a compositional semantics that functorially maps BNs to their underlying probability distribution and, in particular, it provides a convenient means to describe structural updates of networks.
+This paper exploits extended Bayesian networks for uncertainty
+reasoning on Petri nets, where firing of transitions is
+probabilistic. In particular, Bayesian networks are used as symbolic
+representations of probability distributions, modelling the
+observer's knowledge about the tokens in the net. The observer
+can study the net by monitoring successful and failed steps.
+
+An update mechanism for Bayesian nets is enabled by relaxing some of
+their restrictions, leading to modular Bayesian nets that can conveniently be represented and modified by
+viewing them through the lens of the categorical notion of a PROP.
+As for every symbolic representation, the question is how to derive
+information -- in this case marginal probability distributions --
+from a modular Bayesian net. We show how to do this by generalizing
+the known method of variable elimination.
+
+The approach is illustrated by examples about the spreading of
+diseases (SIR model) and information diffusion in social
+networks. We have implemented our approach and provide runtime
+results.
 
 ## Program
-The programs in this repository implement CNUs and GBNs as described in the paper. In order to show the advantage of modelling CNUs with GBNs we implemented the simplification steps for GBNs able turn every GBN into an OBN again, reducing the complexity of evaluating it. In order to have a reference for comparing runtimes we also implemented a variant of CNUs using a simple joint distribution as the underlying model to store probabilities.
+This repository extends the git repository https://github.com/bencabrera/bayesian_nets_program by adding the option for probabilistic transitions amongst other things. It implements CNUs and GBNs as described in the paper. In order to show the advantage of modelling CNUs with GBNs we implemented the option of calculating the marginal probability of a specific place in the GBN. In order to have a reference for comparing runtimes we also used a variant of CNUs using a simple joint distribution as the underlying model to store probabilities.
 Mostly for development purposes there are also functions to load, save, draw and randomly generate GBNs.
 
 GBNs are visualized using GraphViz.
@@ -16,10 +35,10 @@ Vertices visualized as small dots and labelled with `i_...` or `o_...` symbolize
 The following GIF shows the transformation of the GBN during the running CNU example of the paper. We start with the initial GBN and add vertices according to the successful firing of transition t4 (t3 in the program, since numbering starts at 0) and the failure of firing t1 (t0 in the program). Finally we once call the simplification command to reduce the complexity of the GBN by applying the local and global simplifications described in the paper.
 
 <p align="center">
-  <img src="images/cnu_paper_example.gif">
+  <img src="paper_example_evaluate.gif">
 </p>
 
-### Simplification of GBNs
+### Evaluations of GBNs
 The next GIF is meant to give an impression of how the simplification of an arbitrary GBN works. To this end we start with a randomly generated GBN with 8 input, 8 outputs and 15 inside vertices to start with. 
 Simplifications are then performend by trying (in this order) to apply simplifications called
 1. (CoUnit), 

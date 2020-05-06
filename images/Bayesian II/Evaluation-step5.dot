@@ -1,0 +1,9 @@
+digraph G {
+graph[label="Evaluation step 2",labelloc=top,labeljust=c];
+rankdir=LR;
+{ rank=same; }
+{ rank=same; 12;}
+0[label="new", shape="box"];
+12[xlabel="o_0", shape="point"];
+0->12 [label="(0,0)"];
+}
