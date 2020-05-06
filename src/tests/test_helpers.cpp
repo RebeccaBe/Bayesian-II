@@ -197,7 +197,7 @@ void test_joint_dist_matrix_equal_marginal_prob(const JointDist& joint_dist, con
 
     unsigned long long to_max = joint_dist_ordered.size();
     std::size_t matrix_max = (log10(to_max))/(log10(2));
-    MatrixPtr matrix = std::make_shared<DynamicMatrix>(matrix_max,0);
+    MatrixPtr matrix = std::make_shared<DynamicMatrix>(0,matrix_max);
 
     for(Index to = 0; to < to_max; to++) {
         matrix->set(to, 0, joint_dist_ordered[to].second);

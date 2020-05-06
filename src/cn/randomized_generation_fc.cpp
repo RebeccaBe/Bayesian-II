@@ -15,8 +15,6 @@ CN randomize_fc_cn(
 	std::mt19937& mt
 )
 {
-	if(n_max_pre_places + n_max_post_places > n_places)
-		throw std::logic_error("randomize_cn: n_max_pre_places + n_max_post_places > n_places");
 	if(n_max_tokens > n_places)
 		throw std::logic_error("randomize_cn: n_max_tokens > n_places");
 

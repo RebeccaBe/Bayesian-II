@@ -9,6 +9,7 @@
 #include "../simplification/global_simplification.h"
 #include "../simplification/local_simplification.h"
 
+bool debug_mode = false;
 
 // returns which vertices have to be updated
 // if wire. active == false afterwards hints towards carry bit
@@ -83,7 +84,7 @@ MatrixPtr evaluate(const GBN &gbn) {
     m->add(*wire_structure.output_bitvec, *wire_structure.input_bitvec, product);
 
     std::size_t i_wire = 0;
-    //std::cout << "number of independent wires:" << std::count_if(wires.begin(), wires.end(), [](Wire w){return w.independent;}) << std::endl;
+    if(debug_mode) std::cout << "number of independent wires:" << std::count_if(wires.begin(), wires.end(), [](Wire w){return w.independent;}) << std::endl;
     const std::size_t max_i_wire = wires.size();
 
     std::set<Vertex> affected_vertices; // TODO: optimization: replace this with flat set
@@ -418,11 +419,12 @@ MatrixPtr evaluate_stepwise(const GBN &gbn) {
         if(!nodes.empty()) {
             gbn_result  = node_elimination(gbn_result, nodes);
 
-            //std::ofstream f1("Evaluation-step"+std::to_string(index)+".dot");
-            //draw_gbn_graph(f1, gbn_result, "");
-            //std::ofstream f("Evaluation-step.dot");
-            //draw_gbn_graph(f, gbn_result, "");
-            //index++;
+            if(debug_mode) {
+                std::ofstream f1("Evaluation-step" + std::to_string(index) + ".dot");
+                std::ofstream f("Evaluation-step.dot");
+                draw_gbn_graph(f1, gbn_result, "Evaluation step " + std::to_string(index++));
+                draw_gbn_graph(f, gbn_result, "");
+            }
 
             changed = true;
         } else {
@@ -452,7 +454,6 @@ MatrixPtr evaluate_specific_place(std::size_t place, const GBN &gbn_og) {
     if(place > output_vertices.size())
         throw std::logic_error(std::string("The chosen place " + std::to_string(place) + " doesn't exist in the given network."));
 
-
     std::vector<Vertex> chosen_output;
     chosen_output.push_back(output_vertices[place]);
 
@@ -478,7 +479,12 @@ MatrixPtr evaluate_specific_place(std::size_t place, const GBN &gbn_og) {
     find_relevant_nodes(gbn, relevant_nodes, chosen_output);
     std::vector<Vertex> relevant_nodes_vector (relevant_nodes.begin(), relevant_nodes.end());
 
-    auto sub_gbn = SubGBN::make_from_vertices(gbn, relevant_nodes_vector);
+    auto sub_gbn = SubGBN::make_from_vertices(gbn, relevant_nodes_vector, true);
+
+    if(debug_mode) {
+        std::ofstream f("Evaluation-step0.dot");
+        draw_gbn_graph(f, sub_gbn.gbn, "Evaluation step 0");
+    }
 
     return evaluate_stepwise(sub_gbn.gbn);
 }

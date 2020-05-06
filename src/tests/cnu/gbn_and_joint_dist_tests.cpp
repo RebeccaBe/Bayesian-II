@@ -115,6 +115,28 @@ TEST_CASE("paper_example.cnu: CNU stochastic ops on joint dist and GBN should le
     test_joint_dist_matrix_equal(dist, *p_m);
 }
 
+TEST_CASE("paper_exmple_II.cnu: CNU probabilistic ops on joint dist and GBN should lead to same dist") {
+
+    std::random_device rd;
+    std::mt19937 mt(rd());
+
+    std::ifstream f_cn(TEST_INSTANCE_FOLDER + "paper_example_II.cn");
+    auto cn = read_cn(f_cn);
+    auto cn_copy = cn;
+
+    auto dist = build_uniform_joint_dist(4);
+
+    std::ifstream f_gbn(TEST_INSTANCE_FOLDER + "paper_example_II.gbn");
+    auto gbn = read_gbn(f_gbn);
+
+    fire_with_probability_on_gbn(cn_copy, gbn, {{0, 0.25},{1, 0.5}, {2, 0.25}}, 1);
+    fire_with_probability_on_joint_dist(cn_copy, dist, {{0, 0.25},{1, 0.5}, {2, 0.25}}, 1);
+
+    auto p_m = evaluate_specific_place(2, gbn);
+
+    test_joint_dist_matrix_equal_marginal_prob(dist, *p_m, 2);
+}
+
 TEST_CASE("CNU ops on joint dist and GBN should lead to same dist") 
 {
 	std::size_t n_places = 22;

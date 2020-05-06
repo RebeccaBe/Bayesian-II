@@ -84,7 +84,7 @@ bool test_joint_dist_matrix_equal_marginal_prob(const JointDist& joint_dist, con
     from_max = from_max << m1.n;
     for(Index to = 0; to < to_max; to++)
         for(Index from = 0; from < from_max; from++)
-            if(m1.get(to, from) - (sum_m.get(to, from)) < 0.000001)
+            if(!(m1.get(to, from) - (sum_m.get(to, from)) < 0.0001) || !((sum_m.get(to, from)) - m1.get(to, from) < 0.0001))
                 equal = false;
 
     return equal;
@@ -208,14 +208,16 @@ int main(int argc, const char** argv)
             }
             auto end_time_dist = std::chrono::steady_clock::now();
 
-            //std::cout << "Matrices equal : " << test_joint_dist_matrix_equal_marginal_prob(joint_dist, *p_m, 0) << std::endl;
-
-
             double diff_milliseconds_gbn = std::chrono::duration<double, std::milli>(end_time_gbn-start_time_gbn).count();
             double diff_milliseconds_dist = std::chrono::duration<double, std::milli>(end_time_dist-start_time_dist).count();
 
 
             csv_file << n_places << ";" << diff_milliseconds_gbn << ";" << diff_milliseconds_dist << std::endl;
+
+            if(is_detailed) {
+                if(!test_joint_dist_matrix_equal_marginal_prob(joint_dist, *p_m, 0))
+                    std::cout << "Matrices are not equal!" << std::endl;
+            }
         }
     }
 

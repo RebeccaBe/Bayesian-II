@@ -75,7 +75,7 @@ namespace {
 }
 
 
-SubGBN SubGBN::make_from_vertices(const GBN& gbn, std::vector<Vertex> inside_vertices)
+SubGBN SubGBN::make_from_vertices(const GBN& gbn, std::vector<Vertex> inside_vertices, bool keep_names)
 {
 	auto& g_global = gbn.graph;
 
@@ -106,11 +106,17 @@ SubGBN SubGBN::make_from_vertices(const GBN& gbn, std::vector<Vertex> inside_ver
 	std::vector<Port> subgbn_input_ports(input_ports.size());
 	std::vector<std::vector<Port>> subgbn_output_ports(output_ports.size());
 
+	std::size_t index = 0;
 	for(auto v : inside_vertices)
 	{
 		put(vertex_matrix, g_local, global_to_local_vertex_map.at(v), matrix(v,g_global));
-        if(matrix(v,g_global)-> type == DIAGONAL || matrix(v,g_global)-> type == F)
-            put(vertex_name, g_local, global_to_local_vertex_map.at(v), "diag");
+
+		if(keep_names) {
+		    put(vertex_name, g_local, global_to_local_vertex_map.at(v), name(v, g_global));
+        } /*else {
+		    if (matrix(v, g_global)->type == DIAGONAL || matrix(v, g_global)->type == F)
+                put(vertex_name, g_local, global_to_local_vertex_map.at(v), "diag_"+std::to_string(index++));
+        }*/
 
 		for(auto e : boost::make_iterator_range(boost::out_edges(v,g_global)))
 		{
