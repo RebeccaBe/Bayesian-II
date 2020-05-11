@@ -1,6 +1,7 @@
 #pragma once
 
 #include "random_transition_helper.h"
+#include "../../gbn/evaluation/evaluation.h"
 #include "../../../libs/cxxopts/include/cxxopts.hpp"
 
 struct CN_Parameters {
@@ -21,7 +22,7 @@ struct CN_Parameters {
 	double P_SUCCESS;
 
 	bool FREE_CHOICE;
-	bool MARGINAL;
+	EvaluationType EVALUATION_TYPE;
 	//std::size_t COMPARISON_VALUE;
 
 	std::size_t N_MAX_TRANSITIONS_PER_OP;

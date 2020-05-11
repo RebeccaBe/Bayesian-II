@@ -19,7 +19,7 @@ int main(int argc, char** argv)
 	auto gbn = read_gbn(gbn_file);
 	check_gbn_integrity(gbn);
 
-	auto p_m = evaluate_stepwise(gbn);
+	auto p_m = evaluate(gbn, DEGREE);
 	print_matrix(std::cout, *p_m);
 
 	return 0;

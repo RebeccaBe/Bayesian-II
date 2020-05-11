@@ -120,7 +120,7 @@ int main(int argc, const char** argv)
             ("detailed", "")
 
             ("free-choice", "1 or 0", cxxopts::value<bool>()->default_value("false"))
-            ("marginal", "Type cannot be changed", cxxopts::value<bool>()->default_value("true"))
+            ("evaluation_type", "Types: degree or fillIn", cxxopts::value<std::string>()->default_value("degree"))
             ;
 
     auto params = options.parse(argc, argv);
@@ -177,7 +177,7 @@ int main(int argc, const char** argv)
             auto start_time_gbn = std::chrono::steady_clock::now();
             for(std::size_t i_fire = 0; i_fire < cn_params.N_TRANSITIONS_PER_RUN; i_fire++) {
                 if(is_detailed)
-                    std::cout << "i_fire: " << i_fire << std::endl;
+                    std::cout << "gbn i_fire: " << i_fire << std::endl;
 
                 auto i_transition = rand_transition_helper.next_from_bubbles(mt);
                 auto chosen_transition = rand_transition_helper.choose_transition(cn, i_transition);
@@ -193,7 +193,7 @@ int main(int argc, const char** argv)
                     draw_gbn_graph(f, gbn, std::to_string(i_fire));
                 }
             }
-            auto p_m = evaluate_specific_place(0, gbn);
+            auto p_m = evaluate_specific_place(0, gbn, cn_params.EVALUATION_TYPE);
             auto end_time_gbn = std::chrono::steady_clock::now();
 
 
@@ -201,7 +201,7 @@ int main(int argc, const char** argv)
             auto start_time_dist = std::chrono::steady_clock::now();
             for(std::size_t i_fire = 0; i_fire < cn_params.N_TRANSITIONS_PER_RUN; i_fire++) {
                 if(is_detailed)
-                    std::cout << "i_fire: " << i_fire << std::endl;
+                    std::cout << "dist i_fire: " << i_fire << std::endl;
 
                 auto callback = (is_detailed) ? [&operation](std::string high_level, std::string low_level) { std::cout << high_level << " " << low_level << std::endl; } : std::function<void(std::string,std::string)>();
                 fire_with_probability_on_joint_dist(cn_copy, joint_dist, i_transitions[i_fire], chosen_transitions[i_fire], callback);

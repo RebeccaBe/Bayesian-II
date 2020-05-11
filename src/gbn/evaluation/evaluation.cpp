@@ -49,86 +49,6 @@ void update_dependent_wires(WireStructure &wire_structure, Wire independent_wire
     }
 }
 
-MatrixPtr evaluate(const GBN &gbn) {
-    auto &g = gbn.graph;
-    auto wire_structure = build_wire_structure(gbn);
-    auto &wires = wire_structure.wires;
-
-    bool is_dynamic = 0;
-    for(auto vertex : all_vertices(gbn)) {
-        if(type(vertex, g) == NODE) {
-            auto matrix_type = matrix(vertex, g)->type;
-            if (!(matrix_type == F || matrix_type == DIAGONAL))
-                is_dynamic = 1;
-        }
-    }
-
-    MatrixPtr m;
-    if(!is_dynamic && (input_vertices(gbn).size() == output_vertices(gbn).size()))
-        m = std::make_shared<DiagonalMatrix>(gbn.n);
-    else
-        m = std::make_shared<DynamicMatrix>(gbn.n, gbn.m);
-
-    auto inside_vertices = ::inside_vertices(gbn);
-
-    // init probabilities to the value at zero
-    auto all_v = all_vertices(gbn);
-    auto v_max = *std::max_element(all_v.begin(), all_v.end()); // TODO: put v_max into GBN as a property
-    ProbabilityBookkeeper bk(v_max + 1, inside_vertices);
-    for (auto v : inside_vertices) {
-        auto &m_v = *matrix(v, g);
-        auto p = m_v.get(*wire_structure.vertex_output_bitvecs[v], *wire_structure.vertex_input_bitvecs[v]);
-        bk.update_one_node(v, p);
-    }
-    double product = bk.get_product();
-    m->add(*wire_structure.output_bitvec, *wire_structure.input_bitvec, product);
-
-    std::size_t i_wire = 0;
-    if(debug_mode) std::cout << "number of independent wires:" << std::count_if(wires.begin(), wires.end(), [](Wire w){return w.independent;}) << std::endl;
-    const std::size_t max_i_wire = wires.size();
-
-    std::set<Vertex> affected_vertices; // TODO: optimization: replace this with flat set
-    while (i_wire < max_i_wire) // TODO: do this more efficiently with gray codes -> only one wire flip at a time needed
-    {
-        auto &w = wires[i_wire];
-
-        if (w.independent) {
-
-            auto affected_vertices_vec = flip_wire(w);
-            update_dependent_wires(wire_structure, w, affected_vertices_vec);
-            affected_vertices.insert(affected_vertices_vec.begin(), affected_vertices_vec.end());
-
-            if (!w.active) // carry bit needed
-            {
-                i_wire++;
-            } else {
-                for (auto v : affected_vertices) {
-                    const auto &m_v = *matrix(v, g);
-                    auto p = m_v.get(*wire_structure.vertex_output_bitvecs[v],
-                                     *wire_structure.vertex_input_bitvecs[v]);
-                    bk.update_one_node(v, p);
-                }
-
-                double product = bk.get_product();
-                m->add(*wire_structure.output_bitvec, *wire_structure.input_bitvec, product);
-                affected_vertices.clear();
-                i_wire = 0;
-            }
-        } else
-            i_wire++;
-    }
-
-    for (auto v : inside_vertices) {
-        auto &m_v = *matrix(v, g);
-        if (!m_v.is_stochastic) {
-            m->is_stochastic = false;
-            break;
-        }
-    }
-
-    return m;
-}
-
 std::size_t get_edges(std::vector<Vertex> vertices, const GBN gbn) {
 
     auto sub_gbn = SubGBN::make_from_vertices(gbn, vertices);
@@ -232,7 +152,7 @@ void find_diagonal_nodes(GBN gbn, std::set<Vertex>& nodes, std::vector<Vertex>& 
     }
 }
 
-GBN node_elimination(GBN& gbn, std::vector<Vertex> nodes) {
+GBN node_elimination_Degree(GBN& gbn, std::vector<Vertex> nodes) {
     auto &g = gbn.graph;
 
     std::size_t min_degree = get_edges(nodes, gbn) + 1;
@@ -365,6 +285,63 @@ GBN node_elimination(GBN& gbn, std::vector<Vertex> nodes) {
     return gbn;
 }
 
+GBN node_elimination_FillIn(GBN& gbn, std::vector<Vertex> nodes) {
+    auto &g = gbn.graph;
+
+    std::size_t min_degree = get_edges(nodes, gbn) + 1;
+    std::vector<Vertex> min_degree_neighbors = {nodes[0], nodes[1]}; //dummy values; are these even  necessary?
+
+    //First get rid of the Terminator nodes
+    bool terminator_exists = false;
+    /*for (auto v : nodes) {
+        if (m(v, g) == 0) {
+            terminator_exists = true;
+            auto neighbors_v = neighbors(v, g); //this checks all vertex pairs at least twice
+
+            for (auto neighbor_v : neighbors_v) {
+                std::vector<Vertex> neighbors_i = {v, neighbor_v};
+
+                std::size_t v_degree = get_edges(neighbors_i, gbn);
+                if (v_degree < min_degree) {
+                    min_degree = v_degree;
+                    min_degree_neighbors = neighbors_i;
+                }
+            }
+        }
+    }*/
+
+
+    if (!terminator_exists) {
+        for (auto v : nodes) {
+            auto neighbors_v = neighbors(v, g); //this checks all vertex pairs at least twice
+
+            for (auto neighbor_v : neighbors_v) {
+                std::vector<Vertex> neighbors_i = {v, neighbor_v};
+
+                SubGBN sub_gbn = SubGBN::make_from_vertices(gbn, neighbors_i);
+
+                std::size_t v_degree = input_vertices(sub_gbn.gbn).size() + output_vertices(sub_gbn.gbn).size();
+                if (v_degree < min_degree) {
+                    min_degree = v_degree;
+                    min_degree_neighbors = neighbors_i;
+                }
+            }
+        }
+    }
+
+    auto expanded_nodes = expand_list(gbn, min_degree_neighbors);
+    for(auto node : expanded_nodes) {
+        if(n(node, g) == 0) {
+            std::string op;
+            normalize_substoch_front_vertices_without_inputs(gbn, node, op);
+        }
+    }
+
+    merge_vertices(gbn, expanded_nodes);
+
+    return gbn;
+}
+
 void find_relevant_nodes(GBN gbn, std::set<Vertex>& nodes, std::vector<Vertex>& nodes_to_be_explored) {
     auto g = gbn.graph;
     auto nodes_copy = nodes;
@@ -386,7 +363,7 @@ void find_relevant_nodes(GBN gbn, std::set<Vertex>& nodes, std::vector<Vertex>& 
     }
 }
 
-MatrixPtr evaluate_stepwise(const GBN &gbn) {
+MatrixPtr evaluate_stepwise(const GBN &gbn, EvaluationType eval_type) {
     auto gbn_result = gbn;
     int index = 1;
 
@@ -418,7 +395,16 @@ MatrixPtr evaluate_stepwise(const GBN &gbn) {
         }
 
         if(!nodes.empty()) {
-            gbn_result  = node_elimination(gbn_result, nodes);
+            switch(eval_type) {
+                case FILLIN:{
+                    gbn_result  = node_elimination_FillIn(gbn_result, nodes);
+                    break;
+                }
+                case DEGREE: {
+                    gbn_result  = node_elimination_Degree(gbn_result, nodes);
+                    break;
+                }
+            }
 
             if(debug_mode) {
                 std::ofstream f1("Evaluation-step" + std::to_string(index) + ".dot");
@@ -438,7 +424,7 @@ MatrixPtr evaluate_stepwise(const GBN &gbn) {
     auto vertices = inside_vertices(gbn_result);
     MatrixPtr m;
     if(vertices.size() > 1) {
-        m = evaluate(gbn_result);
+        m = evaluate(gbn_result, DEFAULT);
     } else {
         m = matrix(vertices.at(0), gbn_result.graph);
     }
@@ -447,7 +433,7 @@ MatrixPtr evaluate_stepwise(const GBN &gbn) {
     return m;
 }
 
-MatrixPtr evaluate_specific_place(std::size_t place, const GBN &gbn_og) {
+MatrixPtr evaluate_specific_place(std::size_t place, const GBN &gbn_og, EvaluationType eval_type) {
     auto gbn = gbn_og;
     auto &g = gbn.graph;
     auto output_vertices = ::output_vertices(gbn);
@@ -487,5 +473,88 @@ MatrixPtr evaluate_specific_place(std::size_t place, const GBN &gbn_og) {
         draw_gbn_graph(f, sub_gbn.gbn, "Evaluation step 0");
     }
 
-    return evaluate_stepwise(sub_gbn.gbn);
+    return evaluate_stepwise(sub_gbn.gbn, eval_type);
+}
+
+MatrixPtr evaluate(const GBN &gbn, EvaluationType eval_type) {
+    if(eval_type != DEFAULT)
+        evaluate_stepwise(gbn, eval_type);
+
+    auto &g = gbn.graph;
+    auto wire_structure = build_wire_structure(gbn);
+    auto &wires = wire_structure.wires;
+
+    bool is_dynamic = 0;
+    for(auto vertex : all_vertices(gbn)) {
+        if(type(vertex, g) == NODE) {
+            auto matrix_type = matrix(vertex, g)->type;
+            if (!(matrix_type == F || matrix_type == DIAGONAL))
+                is_dynamic = 1;
+        }
+    }
+
+    MatrixPtr m;
+    if(!is_dynamic && (input_vertices(gbn).size() == output_vertices(gbn).size()))
+        m = std::make_shared<DiagonalMatrix>(gbn.n);
+    else
+        m = std::make_shared<DynamicMatrix>(gbn.n, gbn.m);
+
+    auto inside_vertices = ::inside_vertices(gbn);
+
+    // init probabilities to the value at zero
+    auto all_v = all_vertices(gbn);
+    auto v_max = *std::max_element(all_v.begin(), all_v.end()); // TODO: put v_max into GBN as a property
+    ProbabilityBookkeeper bk(v_max + 1, inside_vertices);
+    for (auto v : inside_vertices) {
+        auto &m_v = *matrix(v, g);
+        auto p = m_v.get(*wire_structure.vertex_output_bitvecs[v], *wire_structure.vertex_input_bitvecs[v]);
+        bk.update_one_node(v, p);
+    }
+    double product = bk.get_product();
+    m->add(*wire_structure.output_bitvec, *wire_structure.input_bitvec, product);
+
+    std::size_t i_wire = 0;
+    if(debug_mode) std::cout << "number of independent wires:" << std::count_if(wires.begin(), wires.end(), [](Wire w){return w.independent;}) << std::endl;
+    const std::size_t max_i_wire = wires.size();
+
+    std::set<Vertex> affected_vertices; // TODO: optimization: replace this with flat set
+    while (i_wire < max_i_wire) // TODO: do this more efficiently with gray codes -> only one wire flip at a time needed
+    {
+        auto &w = wires[i_wire];
+
+        if (w.independent) {
+
+            auto affected_vertices_vec = flip_wire(w);
+            update_dependent_wires(wire_structure, w, affected_vertices_vec);
+            affected_vertices.insert(affected_vertices_vec.begin(), affected_vertices_vec.end());
+
+            if (!w.active) // carry bit needed
+            {
+                i_wire++;
+            } else {
+                for (auto v : affected_vertices) {
+                    const auto &m_v = *matrix(v, g);
+                    auto p = m_v.get(*wire_structure.vertex_output_bitvecs[v],
+                                     *wire_structure.vertex_input_bitvecs[v]);
+                    bk.update_one_node(v, p);
+                }
+
+                double product = bk.get_product();
+                m->add(*wire_structure.output_bitvec, *wire_structure.input_bitvec, product);
+                affected_vertices.clear();
+                i_wire = 0;
+            }
+        } else
+            i_wire++;
+    }
+
+    for (auto v : inside_vertices) {
+        auto &m_v = *matrix(v, g);
+        if (!m_v.is_stochastic) {
+            m->is_stochastic = false;
+            break;
+        }
+    }
+
+    return m;
 }

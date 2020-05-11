@@ -6,11 +6,14 @@
 #include "../modification/merging.h"
 #include "../../cnu/operations_on_gbn.h"
 
-
+enum EvaluationType {
+    DEFAULT,
+    FILLIN,
+    DEGREE
+};
 
 std::vector<Vertex> flip_wire(Wire &wire);
 
-MatrixPtr evaluate(const GBN &gbn);
-MatrixPtr evaluate_stepwise(const GBN &gbn);
-MatrixPtr evaluate_specific_place(std::size_t place, const GBN &gbn);
+MatrixPtr evaluate(const GBN &gbn, EvaluationType eval_type = DEFAULT);
+MatrixPtr evaluate_specific_place(std::size_t place, const GBN &gbn, EvaluationType eval_type = DEGREE);
 

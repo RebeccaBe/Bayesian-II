@@ -43,7 +43,7 @@ int main(int argc, const char** argv)
 		("export-name", "", cxxopts::value<std::string>()->default_value("out"))
 		("detailed", "")
 
-		("marginal", "Type cannot be changed", cxxopts::value<bool>()->default_value("false"))
+		("evaluation_type", "Type only important for GBNs.", cxxopts::value<std::string>()->default_value("default"))
 		("free-choice", "1 or 0", cxxopts::value<bool>()->default_value("false"))
 		;
 	auto params = options.parse(argc, argv);
