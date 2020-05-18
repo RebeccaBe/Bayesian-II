@@ -69,11 +69,18 @@ WireStructure build_wire_structure(const GBN &gbn) {
 
         } else {
             const auto &matrix_p_from = *matrix(p_from.first, g);
-            if (!(matrix_p_from.type == F || matrix_p_from.type == DIAGONAL))
+            if (!(matrix_p_from.type == F || matrix_p_from.type == DIAGONAL) && matrix_p_from.diag_places.empty())
                 master_wires_map.insert(std::pair<Port, std::size_t>(p_from, w.name));
+            else if (!matrix_p_from.diag_places.empty()){
+                bool is_independent = true;
+                for(auto [input, output] : matrix_p_from.diag_places)
+                    if(output == p_from.second)
+                        is_independent = false;
+                if(is_independent)
+                    master_wires_map.insert(std::pair<Port, std::size_t>(p_from, w.name));
+            }
             else
                 w.independent = false;
-
         }
 
         wire_structure.wires.push_back(w);
@@ -82,27 +89,48 @@ WireStructure build_wire_structure(const GBN &gbn) {
 
     //build actual dependency
     for (auto &wire : wire_structure.wires) {
-        if (wire.independent == false) {
+        if (!wire.independent) {
 
             bool still_dependent = true;
             Port deep_source_Port = wire.source;
 
             while (still_dependent) {
 
-                auto edge_list = boost::make_iterator_range(boost::in_edges(deep_source_Port.first, g));
+                auto deep_source_Vertex = deep_source_Port.first;
+                auto edge_list = boost::make_iterator_range(boost::in_edges(deep_source_Vertex, g));
                 for (auto edge : edge_list) {
 
-                    if (port_to(edge, g) == deep_source_Port.second) {
+                    const auto &deep_source_Matrix = *matrix(deep_source_Vertex, g);
+                    switch (deep_source_Matrix.type) {
+                        case F:
+                        case DIAGONAL:
+                            if (port_to(edge, g) == deep_source_Port.second) {
+                                deep_source_Port = std::pair<Vertex, std::size_t>(boost::source(edge, g),
+                                                                                  port_from(edge, g));
 
-                        deep_source_Port = std::pair<Vertex, std::size_t>(boost::source(edge, g), port_from(edge, g));
-
-                        auto search = master_wires_map.find(deep_source_Port);
-                        if (search != master_wires_map.end()) {
-                            wire.master_wire = master_wires_map.at(deep_source_Port);
-                            still_dependent = false;
-                            //std::cout << "wire: " << wire.name << " dependent of: " << wire.master_wire << std::endl;
+                                auto search = master_wires_map.find(deep_source_Port);
+                                if (search != master_wires_map.end()) {
+                                    wire.master_wire = master_wires_map.at(deep_source_Port);
+                                    still_dependent = false;
+                                    //std::cout << "wire: " << wire.name << " dependent of: " << wire.master_wire << std::endl;
+                                    break;
+                                } else break;
+                            }
                             break;
-                        } else break;
+                        case DYNAMIC:
+                            if (port_to(edge, g) == deep_source_Matrix.diag_places.at(deep_source_Port.second)) {
+                                deep_source_Port = std::pair<Vertex, std::size_t>(boost::source(edge, g),
+                                                                                  port_from(edge, g));
+
+                                auto search = master_wires_map.find(deep_source_Port);
+                                if (search != master_wires_map.end()) {
+                                    wire.master_wire = master_wires_map.at(deep_source_Port);
+                                    still_dependent = false;
+                                    //std::cout << "wire: " << wire.name << " dependent of: " << wire.master_wire << std::endl;
+                                    break;
+                                } else break;
+                            }
+                            break;
                     }
                 }
             }
@@ -117,7 +145,7 @@ void print_wire_structure(std::ostream &ostr, const WireStructure &wire_structur
 
     std::size_t i_wire = 0;
     for (auto w : wire_structure.wires) {
-        ostr << "--- " << i_wire++ << " --- " << std::endl;
+        ostr << "--- " << w.name << " --- " << std::endl;
         ostr << "inside_ports: " << std::endl;
         for (auto[v, bitvec, pos] : w.inside_ports) {
             ostr << name(v, gbn.graph) << " ";

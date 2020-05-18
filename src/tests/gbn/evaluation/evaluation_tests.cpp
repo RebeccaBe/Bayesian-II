@@ -265,18 +265,10 @@ TEST_CASE("The step-wise evaluation should yield the same result.")
 }
 
 TEST_CASE("test") {
-    auto gbn = read_and_check_gbn(TEST_INSTANCE_FOLDER + "example_10_places.gbn");
+    auto gbn = read_and_check_gbn(TEST_INSTANCE_FOLDER + "diag_test.gbn");
 
-    auto start_time_gbn = std::chrono::steady_clock::now();
-    evaluate_specific_place(1,gbn,DEGREE);
-    auto end_time_gbn = std::chrono::steady_clock::now();
+    std::ofstream f("testing.dot");
+    draw_gbn_graph(f, gbn, std::to_string(1));
 
-    auto start_time_gbn1 = std::chrono::steady_clock::now();
-    evaluate_specific_place(1,gbn,FILLIN);
-    auto end_time_gbn1 = std::chrono::steady_clock::now();
-
-    double diff_milliseconds_gbn = std::chrono::duration<double, std::milli>(end_time_gbn-start_time_gbn).count();
-    double diff_milliseconds_gbn1 = std::chrono::duration<double, std::milli>(end_time_gbn1-start_time_gbn1).count();
-
-    std::cout << diff_milliseconds_gbn<< " vs "<<diff_milliseconds_gbn1 << std::endl;
+    auto p_m = evaluate_specific_place(0,gbn, DEGREE);
 }

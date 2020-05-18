@@ -45,6 +45,8 @@ class Matrix {
 
 		bool is_stochastic;
 
+        std::map<std::size_t, std::size_t> diag_places; //<output, input>
+
 		Matrix(const Index n, const Index m, const MatrixType type, bool is_stochastic);
 
 		virtual double get(const BitVec& to, const BitVec& from) const = 0;
@@ -70,7 +72,7 @@ class DynamicMatrix : public Matrix {
 
 	std::unordered_map<std::pair<BitVec,BitVec>, double> data;
 
-	public: 
+	public:
 
 	DynamicMatrix(const Index n, const Index m);
 	virtual ~DynamicMatrix();
@@ -126,14 +128,14 @@ class ZeroMatrix : public Matrix {
 };
 
 class DiagonalMatrix : public Matrix {
-public:
-	const Index k;
+    public:
+        const Index k;
+        std::unordered_map<BitVec, double> data;
 
-    std::unordered_map<BitVec, double> data;
-    DiagonalMatrix(const Index k);
-	virtual ~DiagonalMatrix();
+        DiagonalMatrix(const Index k);
+        virtual ~DiagonalMatrix();
 
-	double get(const BitVec& to, const BitVec& from) const;
-	void set(const BitVec& to, const BitVec& from, double val);
-	void add(const BitVec& to, const BitVec& from, double val);
+        double get(const BitVec& to, const BitVec& from) const;
+        void set(const BitVec& to, const BitVec& from, double val);
+        void add(const BitVec& to, const BitVec& from, double val);
 };

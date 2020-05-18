@@ -484,12 +484,12 @@ MatrixPtr evaluate(const GBN &gbn, EvaluationType eval_type) {
     auto wire_structure = build_wire_structure(gbn);
     auto &wires = wire_structure.wires;
 
-    bool is_dynamic = 0;
+    bool is_dynamic = false;
     for(auto vertex : all_vertices(gbn)) {
         if(type(vertex, g) == NODE) {
             auto matrix_type = matrix(vertex, g)->type;
             if (!(matrix_type == F || matrix_type == DIAGONAL))
-                is_dynamic = 1;
+                is_dynamic = true;
         }
     }
 
@@ -554,6 +554,22 @@ MatrixPtr evaluate(const GBN &gbn, EvaluationType eval_type) {
             m->is_stochastic = false;
             break;
         }
+    }
+
+    if(is_dynamic) {
+        std::vector<std::tuple<Wire, std::size_t>> input_wires, output_wires;
+        for (const auto w : wire_structure.wires)
+            for (auto[pointer, index] : w.io_ports) {
+                if(pointer == wire_structure.output_bitvec)
+                    output_wires.emplace_back(w, index);
+                else if(pointer == wire_structure.input_bitvec)
+                    input_wires.emplace_back(w, index);
+            }
+
+        for(auto [output_wire, output_index] : output_wires)
+            for(auto [input_wire, input_index] : input_wires)
+                if (output_wire.master_wire == input_wire.name)
+                    m->diag_places.insert(std::pair<std::size_t, std::size_t>(output_index, input_index));
     }
 
     return m;
