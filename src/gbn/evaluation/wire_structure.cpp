@@ -73,11 +73,13 @@ WireStructure build_wire_structure(const GBN &gbn) {
                 master_wires_map.insert(std::pair<Port, std::size_t>(p_from, w.name));
             else if (!matrix_p_from.diag_places.empty()){
                 bool is_independent = true;
-                for(auto [input, output] : matrix_p_from.diag_places)
+                for(auto [output, input] : matrix_p_from.diag_places)
                     if(output == p_from.second)
                         is_independent = false;
                 if(is_independent)
                     master_wires_map.insert(std::pair<Port, std::size_t>(p_from, w.name));
+                else
+                    w.independent=false;
             }
             else
                 w.independent = false;
@@ -93,44 +95,51 @@ WireStructure build_wire_structure(const GBN &gbn) {
 
             bool still_dependent = true;
             Port deep_source_Port = wire.source;
+            std::set<Port> visited_ports;
 
             while (still_dependent) {
 
-                auto deep_source_Vertex = deep_source_Port.first;
-                auto edge_list = boost::make_iterator_range(boost::in_edges(deep_source_Vertex, g));
-                for (auto edge : edge_list) {
+                if (is_in(deep_source_Port, visited_ports)) { //if there are loops
+                    wire.independent = false;
+                    master_wires_map.insert(std::pair<Port, std::size_t>(wire.source, wire.name));
+                    still_dependent = false;
+                } else {
+                    visited_ports.insert(deep_source_Port);
+                    auto deep_source_Vertex = deep_source_Port.first;
+                    auto edge_list = boost::make_iterator_range(boost::in_edges(deep_source_Vertex, g));
+                    for (auto edge : edge_list) {
 
-                    const auto &deep_source_Matrix = *matrix(deep_source_Vertex, g);
-                    switch (deep_source_Matrix.type) {
-                        case F:
-                        case DIAGONAL:
-                            if (port_to(edge, g) == deep_source_Port.second) {
-                                deep_source_Port = std::pair<Vertex, std::size_t>(boost::source(edge, g),
-                                                                                  port_from(edge, g));
+                        const auto &deep_source_Matrix = *matrix(deep_source_Vertex, g);
+                        switch (deep_source_Matrix.type) {
+                            case F:
+                            case DIAGONAL:
+                                if (port_to(edge, g) == deep_source_Port.second) {
+                                    deep_source_Port = std::pair<Vertex, std::size_t>(boost::source(edge, g),
+                                                                                      port_from(edge, g));
 
-                                auto search = master_wires_map.find(deep_source_Port);
-                                if (search != master_wires_map.end()) {
-                                    wire.master_wire = master_wires_map.at(deep_source_Port);
-                                    still_dependent = false;
-                                    //std::cout << "wire: " << wire.name << " dependent of: " << wire.master_wire << std::endl;
-                                    break;
-                                } else break;
-                            }
-                            break;
-                        case DYNAMIC:
-                            if (port_to(edge, g) == deep_source_Matrix.diag_places.at(deep_source_Port.second)) {
-                                deep_source_Port = std::pair<Vertex, std::size_t>(boost::source(edge, g),
-                                                                                  port_from(edge, g));
-
-                                auto search = master_wires_map.find(deep_source_Port);
-                                if (search != master_wires_map.end()) {
-                                    wire.master_wire = master_wires_map.at(deep_source_Port);
-                                    still_dependent = false;
-                                    //std::cout << "wire: " << wire.name << " dependent of: " << wire.master_wire << std::endl;
-                                    break;
-                                } else break;
-                            }
-                            break;
+                                    auto search = master_wires_map.find(deep_source_Port);
+                                    if (search != master_wires_map.end()) {
+                                        wire.master_wire = master_wires_map.at(deep_source_Port);
+                                        still_dependent = false;
+                                        //std::cout << "wire: " << wire.name << " dependent of: " << wire.master_wire << std::endl;
+                                        break;
+                                    } else break;
+                                }
+                                break;
+                            case DYNAMIC:
+                                if (deep_source_Matrix.diag_places.count(deep_source_Port.second) > 0) {
+                                    deep_source_Port = std::pair<Vertex, std::size_t>(boost::source(edge, g),
+                                                                                      port_from(edge, g));
+                                    auto search = master_wires_map.find(deep_source_Port);
+                                    if (search != master_wires_map.end()) {
+                                        wire.master_wire = master_wires_map.at(deep_source_Port);
+                                        still_dependent = false;
+                                        //std::cout << "wire: " << wire.name << " dependent of: " << wire.master_wire << std::endl;
+                                        break;
+                                    } else break;
+                                }
+                                break;
+                        }
                     }
                 }
             }
