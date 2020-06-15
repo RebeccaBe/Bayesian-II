@@ -19,14 +19,17 @@ void set_op(const std::vector<std::size_t> places, bool b, GBN& gbn)
 		auto e_pre = *(tmp_in_edges.first);
 		auto e_pos = get(edge_position, g, e_pre);
 		auto v_pre = boost::source(e_pre, g);
+		auto eq_class = equivalence_class(get_edge(v_pre, output_vertices[p], g), g);
 
-		auto v_term = add_vertex(gbn, std::make_shared<TerminatorMatrix>(), "T");
+        auto v_term = add_vertex(gbn, std::make_shared<TerminatorMatrix>(), "T");
 		auto e_term = boost::add_edge(v_pre, v_term, g).first;
 		put(edge_position, g, e_term, std::pair<std::size_t, std::size_t>{ e_pos.first, 0 });
+        put(edge_equivalence_class, g, e_term, eq_class);
 
 		auto v_one = add_vertex(gbn, std::make_shared<OneBMatrix>(b), std::string("1_")+std::to_string(b));
 		auto e_one = boost::add_edge(v_one, output_vertices[p], g).first;
 		put(edge_position, g, e_one, std::pair<std::size_t, std::size_t>{ 0, 0 });
+        put(edge_equivalence_class, g, e_one, max_equivalence_counter_and_increase(gbn));
 
 		boost::remove_edge(v_pre, output_vertices[p], g);
 	}
@@ -47,12 +50,16 @@ void assert_op(const std::vector<std::size_t> places, bool b, GBN& gbn)
 		auto e_pre = *(tmp_in_edges.first);
 		auto e_pos = get(edge_position, g, e_pre);
 		auto v_pre = boost::source(e_pre, g);
+		auto eq_class = equivalence_class(get_edge(v_pre, output_vertices[p], g), g);
 
 		auto v_assert = add_vertex(gbn, std::make_shared<FMatrix>(1,1-b), std::string("F_{1,") + std::to_string(1-b) + "}");
 		auto e_term = boost::add_edge(v_pre, v_assert, g).first;
 		put(edge_position, g, e_term, std::pair<std::size_t, std::size_t>{ e_pos.first, 0 });
+        put(edge_equivalence_class, g, e_term, eq_class);
+
 		auto e_out = boost::add_edge(v_assert, output_vertices[p], g).first;
 		put(edge_position, g, e_out, std::pair<std::size_t, std::size_t>{ 0, 0 });
+        put(edge_equivalence_class, g, e_out, eq_class);
 		boost::remove_edge(v_pre, output_vertices[p], g);
 	}
 }
@@ -76,12 +83,16 @@ void nassert_op(const std::vector<std::size_t> places, bool b, GBN& gbn)
 		auto e_pre = *(tmp_in_edges.first);
 		auto e_pos = get(edge_position, g, e_pre);
 		auto v_pre = boost::source(e_pre, g);
+        auto eq_class = equivalence_class(get_edge(v_pre, output_vertices[p], g), g);
 
 		auto e_to_nassert = boost::add_edge(v_pre, v_nassert, g).first;
 		put(edge_position, g, e_to_nassert, std::pair<std::size_t, std::size_t>{ e_pos.first, i_place });
-		auto e_from_nassert = boost::add_edge(v_nassert, output_vertices[p], g).first;
+        put(edge_equivalence_class, g, e_to_nassert, eq_class);
+
+        auto e_from_nassert = boost::add_edge(v_nassert, output_vertices[p], g).first;
 		put(edge_position, g, e_from_nassert, std::pair<std::size_t, std::size_t>{ i_place, 0 });
-		boost::remove_edge(v_pre, output_vertices[p], g);
+        put(edge_equivalence_class, g, e_from_nassert, eq_class);
+        boost::remove_edge(v_pre, output_vertices[p], g);
 
 		i_place++;
 	}
@@ -104,7 +115,10 @@ void setp_op(const std::vector<std::size_t> places, double p, GBN& gbn) //p repr
 
 		auto v_term = add_vertex(gbn, std::make_shared<TerminatorMatrix>(), "T");
 		auto e_term = boost::add_edge(v_pre, v_term, g).first;
-		put(edge_position, g, e_term, std::pair<std::size_t, std::size_t>{ e_pos.first, 0 });
+		auto og_eq_class = equivalence_class(get_edge(v_pre, output_vertices[p], g), g);
+
+        put(edge_position, g, e_term, std::pair<std::size_t, std::size_t>{ e_pos.first, 0 });
+        put(edge_equivalence_class, g, e_term, og_eq_class);
 
 		auto matrix = std::make_shared<DynamicMatrix>(0,1);
 		matrix->set(1,0,p);
@@ -112,6 +126,7 @@ void setp_op(const std::vector<std::size_t> places, double p, GBN& gbn) //p repr
 		auto v_p = add_vertex(gbn, matrix, std::to_string(p)+std::string(",")+std::to_string((1-p)));
 		auto e_p = boost::add_edge(v_p, output_vertices[p], g).first;
 		put(edge_position, g, e_p, std::pair<std::size_t, std::size_t>{ 0, 0 });
+        put(edge_equivalence_class, g, e_p, max_equivalence_counter_and_increase(gbn));
 
 		boost::remove_edge(v_pre, output_vertices[p], g);
 	}
@@ -274,11 +289,16 @@ void successp_op(const std::vector<std::vector<std::size_t>> pre_places, const s
         auto e_pre = *(tmp_in_edges.first);
         auto e_pos = get(edge_position, g, e_pre);
         auto v_pre = boost::source(e_pre, g);
+        auto eq_class = equivalence_class(get_edge(v_pre, output_vertices[p], g), g);
 
         auto e_to_matrix = boost::add_edge(v_pre, v_matrix, g).first;
         put(edge_position, g, e_to_matrix, std::pair<std::size_t, std::size_t>{ e_pos.first, i_place });
+        put(edge_equivalence_class, g, e_to_matrix, eq_class);
+
         auto e_from_matrix = boost::add_edge(v_matrix, output_vertices[p], g).first;
         put(edge_position, g, e_from_matrix, std::pair<std::size_t, std::size_t>{ i_place, 0 });
+        put(edge_equivalence_class, g, e_from_matrix, max_equivalence_counter_and_increase(gbn));
+
         boost::remove_edge(v_pre, output_vertices[p], g);
 
         i_place++;
@@ -379,11 +399,15 @@ void failp_op(const std::vector<std::vector<std::size_t>> pre_places, const std:
         auto e_pre = *(tmp_in_edges.first);
         auto e_pos = get(edge_position, g, e_pre);
         auto v_pre = boost::source(e_pre, g);
+        auto eq_class = equivalence_class(get_edge(v_pre, output_vertices[p], g), g);
 
         auto e_to_matrix = boost::add_edge(v_pre, v_matrix, g).first;
         put(edge_position, g, e_to_matrix, std::pair<std::size_t, std::size_t>{ e_pos.first, i_place });
+        put(edge_equivalence_class, g, e_to_matrix, eq_class);
+
         auto e_from_matrix = boost::add_edge(v_matrix, output_vertices[p], g).first;
         put(edge_position, g, e_from_matrix, std::pair<std::size_t, std::size_t>{ i_place, 0 });
+        put(edge_equivalence_class, g, e_from_matrix, eq_class);
         boost::remove_edge(v_pre, output_vertices[p], g);
 
         i_place++;
@@ -508,11 +532,16 @@ void successStoch_op(const std::vector<std::vector<std::size_t>> pre_places, con
         auto e_pre = *(tmp_in_edges.first);
         auto e_pos = get(edge_position, g, e_pre);
         auto v_pre = boost::source(e_pre, g);
+        auto eq_class = equivalence_class(get_edge(v_pre, output_vertices[p], g), g);
 
         auto e_to_matrix = boost::add_edge(v_pre, v_matrix, g).first;
         put(edge_position, g, e_to_matrix, std::pair<std::size_t, std::size_t>{ e_pos.first, i_place });
+        put(edge_equivalence_class, g, e_to_matrix, eq_class);
+
         auto e_from_matrix = boost::add_edge(v_matrix, output_vertices[p], g).first;
         put(edge_position, g, e_from_matrix, std::pair<std::size_t, std::size_t>{ i_place, 0 });
+        put(edge_equivalence_class, g, e_from_matrix, max_equivalence_counter_and_increase(gbn));
+
         boost::remove_edge(v_pre, output_vertices[p], g);
 
         i_place++;

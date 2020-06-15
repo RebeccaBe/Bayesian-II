@@ -190,6 +190,35 @@ GBN read_gbn(std::istream& istr)
 		}
 	}
 
+    //build equivalence classes
+    auto &g = gbn.graph;
+	for(auto e : boost::make_iterator_range(boost::edges(g))) {
+        bool found_equivalence_class = false;
+        auto v_from = source(e, g);
+        auto from_pos = port_from(e, g);
+        if(type(v_from, g) == INPUT) {
+            put(edge_equivalence_class, g, e, max_equivalence_counter_and_increase(gbn));
+        } else {
+            for(auto edge : boost::make_iterator_range(boost::out_edges(v_from, g))) {
+                if(port_from(edge, g) == from_pos && edge != e) {
+                    put(edge_equivalence_class, g, e, equivalence_class(edge, g));
+                    found_equivalence_class = true;
+                    break;
+                }
+            }
+            if(!found_equivalence_class){
+                auto m_v = matrix(v_from, g);
+                if (m_v->type == DIAGONAL || m_v->type == F) {
+                    for (auto master_edge : boost::make_iterator_range(boost::in_edges(v_from, g)))
+                        if (port_to(master_edge, g) == from_pos)
+                            put(edge_equivalence_class, g, e, equivalence_class(master_edge, g));
+                } else {
+                    put(edge_equivalence_class, g, e, max_equivalence_counter_and_increase(gbn));
+                }
+            }
+        }
+	}
+
 	return gbn;
 }
 
@@ -231,7 +260,7 @@ namespace {
 			EdgeWriter(const GBNGraph& g) : g(g) {}
 
 			void operator()(std::ostream& out, const GBNGraph::edge_descriptor& e) const {
-				out << "[label=\"(" << port_from(e,g) << "," << port_to(e,g) << ")\"]";
+				out << "[label=\"(" << port_from(e,g) << "," << port_to(e,g) << ")" << "|" << equivalence_class(e,g) << "\"]";
 			}
 		private:
 			const GBNGraph& g;

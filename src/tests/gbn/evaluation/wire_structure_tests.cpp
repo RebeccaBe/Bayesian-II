@@ -30,3 +30,10 @@ TEST_CASE("Every wire should always have at least one input port") {
 	for(auto& w : wire_structure.wires)
 		REQUIRE(w.inside_ports.size() > 0);
 }
+
+TEST_CASE("dependency test") {
+    auto gbn = read_and_check_gbn(TEST_INSTANCE_FOLDER + "diagonal_matrix_2.gbn");
+
+    auto wire_structure = build_wire_structure(gbn);
+    print_wire_structure(std::cout, wire_structure, gbn);
+}

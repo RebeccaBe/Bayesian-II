@@ -109,19 +109,6 @@ TEST_CASE("duplicate_inputs2.gbn: (simplify_matrix_for_duplicate_inputs)")
 	check_evaluates_equal_after_operation(gbn, [](GBN gbn) -> GBN { std::string s; simplify_matrix_for_duplicate_inputs(gbn,0,s); return gbn; });
 }
 
-TEST_CASE("F matrices merging to diagonal matrix should work correctly (f_matrices).") {
-
-	auto gbn = read_and_check_gbn(TEST_INSTANCE_FOLDER + "f_matrices.gbn");
-	auto p_m_before = evaluate(gbn);
-
-    check_evaluates_equal_after_operation(gbn, [](GBN gbn) -> GBN { std::string s; merge_F_matrices_to_diagonal_matrix(gbn,0,s); return gbn; }, [](GBN gbn_before, GBN gbn_after) -> void {
-        REQUIRE(boost::num_edges(gbn_before.graph) == 17);
-        REQUIRE(boost::num_edges(gbn_after.graph) == 10);
-        REQUIRE(matrix(inside_vertices(gbn_after).at(0), gbn_after.graph)->type == DIAGONAL);
-        REQUIRE(inside_vertices(gbn_after).size() == 1);
-    });
-}
-
 TEST_CASE("independent_vars.gbn: (reducing a diagonal matrix with independency)") {
 
 	auto gbn = read_and_check_gbn(TEST_INSTANCE_FOLDER + "independent_vars.gbn");

@@ -257,6 +257,7 @@ GBN generate_random_gbn(std::mt19937& mt, RandomGBNParams params)
 		auto& port_to = input_to_output.first.second;
 		auto e = boost::add_edge(u,v,g).first;
 		put(edge_position, g, e, std::make_pair(port_from, port_to));
+        put(edge_equivalence_class, g, e, max_equivalence_counter_and_increase(gbn));
 	}
 
 	remove_isolated_nodes(gbn);

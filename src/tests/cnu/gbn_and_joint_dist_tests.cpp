@@ -213,6 +213,7 @@ TEST_CASE("CNU probability ops on joint dist and GBN should lead to same dist")
 		}
 		check_gbn_integrity(gbn);
 		simplification(gbn);
+
 		check_gbn_integrity(gbn);
 		auto p_m = evaluate(gbn);
 		test_joint_dist_matrix_equal(joint_dist, *p_m);

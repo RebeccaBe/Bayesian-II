@@ -246,7 +246,9 @@ TEST_CASE("The step-wise evaluation should yield the same result.")
     auto p_m = evaluate(gbn);
 
     for(std::size_t i_rand_transition = 0; i_rand_transition < n_transitions_per_run; i_rand_transition++) {
-        fire_with_probability_on_gbn(cn_copy, gbn_copy, transitions_w_probabilities.at(i_rand_transition), chosen_transitions.at(i_rand_transition));
+        std::string operation;
+        auto callback = (1) ? [&operation](std::string high_level, std::string low_level) { std::cout << high_level << " " << low_level << std::endl; } : std::function<void(std::string,std::string)>();
+        fire_with_probability_on_gbn(cn_copy, gbn_copy, transitions_w_probabilities.at(i_rand_transition), chosen_transitions.at(i_rand_transition), callback);
 
         check_gbn_integrity(gbn_copy);
     }
@@ -262,13 +264,4 @@ TEST_CASE("The step-wise evaluation should yield the same result.")
     test_matrices_equal_marginal_prob(*p_m2, *p_m, 2);
     test_matrices_equal_marginal_prob(*p_m3, *p_m, 3);
     test_matrices_equal_marginal_prob(*p_m4, *p_m, 4);
-}
-
-TEST_CASE("test") {
-    auto gbn = read_and_check_gbn(TEST_INSTANCE_FOLDER + "diag_test.gbn");
-
-    std::ofstream f("testing.dot");
-    draw_gbn_graph(f, gbn, std::to_string(1));
-
-    auto p_m = evaluate_specific_place(0,gbn, DEGREE);
 }

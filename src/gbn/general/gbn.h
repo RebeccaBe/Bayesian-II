@@ -8,11 +8,13 @@ using vertex_matrix_t = boost::vertex_rank_t;
 using vertex_name_t = boost::vertex_name_t;
 using vertex_type_t = boost::vertex_owner_t;
 using edge_position_t = boost::edge_name_t;
+using edge_equivalence_class_t = boost::edge_owner_t;
 
 const auto vertex_matrix = boost::vertex_rank;
 const auto vertex_name = boost::vertex_name;
 const auto vertex_type = boost::vertex_owner;
 const auto edge_position = boost::edge_name;
+const auto edge_equivalence_class = boost::edge_owner;
 
 enum VertexType {
 	INPUT,
@@ -21,7 +23,7 @@ enum VertexType {
 };
 
 using VertexProperty = boost::property<vertex_matrix_t, MatrixPtr, boost::property<vertex_type_t, VertexType, boost::property<vertex_name_t,std::string>>>;
-using EdgeProperty = boost::property<boost::edge_index_t, std::size_t, boost::property<edge_position_t,std::pair<std::size_t,std::size_t>>>;
+using EdgeProperty = boost::property<boost::edge_index_t, std::size_t, boost::property<edge_position_t,std::pair<std::size_t,std::size_t>, boost::property<edge_equivalence_class_t, std::size_t>>>;
 using GBNGraph = boost::adjacency_list<boost::vecS, boost::vecS, boost::bidirectionalS, VertexProperty, EdgeProperty, boost::vecS>;
 
 using Vertex = GBNGraph::vertex_descriptor;
@@ -38,6 +40,8 @@ struct GBN {
 		Index n_vertices;
 
 		GBNGraph graph;
+
+        std::size_t max_eq_class_counter;
 
 		friend std::vector<Vertex> all_vertices(const GBN& gbn);
 		friend std::vector<Vertex> inside_vertices(const GBN& gbn);
@@ -89,3 +93,10 @@ std::size_t degree(const GBNGraph::vertex_descriptor& v, const GBNGraph& g);
 std::vector<Vertex> neighbors(const GBNGraph::vertex_descriptor& v, const GBNGraph& g);
 std::vector<Vertex> all_neighbors(const GBNGraph::vertex_descriptor& v, const GBNGraph& g);
 std::vector<Edge> all_edges(std::vector<GBNGraph::vertex_descriptor>& vertices, const GBNGraph& g);
+
+std::size_t equivalence_class (const GBNGraph::edge_descriptor& e, const GBNGraph& g);
+std::vector<Edge> edges_of_equivalence_class(std::size_t eq_class, const GBN& gbn);
+
+std::size_t max_equivalence_counter_and_increase(GBN& gbn);
+Edge get_edge(const Port& v_from, const Port& v_to, const GBNGraph& g);
+Edge get_edge(const Vertex& v_from, const Vertex& v_to, const GBNGraph& g);

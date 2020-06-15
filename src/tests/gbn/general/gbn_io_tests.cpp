@@ -5,9 +5,14 @@
 #include <fstream>
 #include "../../test_helpers.h"
 
-TEST_CASE("Reading in basic example should work 1") {
+TEST_CASE("Reading in basic example should work") {
 	std::ifstream f(TEST_INSTANCE_FOLDER + "basic1.gbn");
 	auto gbn = read_gbn(f);
+}
+
+TEST_CASE("Reading in basic example with diagonal matrices should work") {
+    std::ifstream f(TEST_INSTANCE_FOLDER + "example_10_transitions.gbn");
+    auto gbn = read_gbn(f);
 }
 
 TEST_CASE("Reading in basic example and intergrity check should work") {

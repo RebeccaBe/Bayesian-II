@@ -93,6 +93,7 @@ SubGBN SubGBN::make_from_vertices(const GBN& gbn, std::vector<Vertex> inside_ver
 	}
 
 	GBN gbn_local(input_ports.size(), output_ports.size(), inside_vertices.size());
+    gbn_local.max_eq_class_counter = gbn.max_eq_class_counter;
 	auto& g_local = gbn_local.graph;
 
 	auto input_vertices = ::input_vertices(gbn_local);
@@ -130,6 +131,7 @@ SubGBN SubGBN::make_from_vertices(const GBN& gbn, std::vector<Vertex> inside_ver
 				auto v_local = global_to_local_vertex_map.at(v_global);
 				auto e_local = boost::add_edge(u_local, v_local, g_local).first;
 				put(edge_position, g_local, e_local, pos_global);
+                put(edge_equivalence_class, g_local, e_local, equivalence_class(e, g_global));
 			}
 			else
 			{
@@ -141,6 +143,7 @@ SubGBN SubGBN::make_from_vertices(const GBN& gbn, std::vector<Vertex> inside_ver
 				{
 					auto e_local = boost::add_edge(u_local, output_vertices[i_output], g_local).first;
 					put(edge_position, g_local, e_local, std::make_pair(pos_global.first, 0));
+                    put(edge_equivalence_class, g_local, e_local, equivalence_class(e, g_global));
 				}
 			}
 		}
@@ -158,6 +161,7 @@ SubGBN SubGBN::make_from_vertices(const GBN& gbn, std::vector<Vertex> inside_ver
 				auto i_input = input_port_map.at(p_input);
 				auto e_local = boost::add_edge(input_vertices[i_input], v_local, g_local).first;
 				put(edge_position, g_local, e_local, std::make_pair(0, pos_global.second));
+                put(edge_equivalence_class, g_local, e_local, equivalence_class(e, g_global));
 			
 				subgbn_input_ports.at(i_input) = { u_global, port_from(e,g_global) };
 			}

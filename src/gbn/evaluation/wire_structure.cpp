@@ -3,8 +3,6 @@
 #include "../../helpers.hpp"
 #include <iostream>
 
-
-
 WireStructure build_wire_structure(const GBN &gbn) {
     auto &g = gbn.graph;
 
@@ -39,14 +37,14 @@ WireStructure build_wire_structure(const GBN &gbn) {
     }
 
     std::map<Port, std::size_t> master_wires_map;
-    std::size_t name = 0; //v1
+    std::size_t index = 0; //v1
 
     // build actual wire structure
     for (auto[p_from, ports_to] : from_to_port_map) {
         Wire w;
 
-        w.name = name;
-        name++; //v1
+        w.name = index;
+        index++; //v1
         w.source = p_from;
 
         if (is_in(p_from.first, input_vertices))
@@ -56,6 +54,7 @@ WireStructure build_wire_structure(const GBN &gbn) {
                     {p_from.first, wire_structure.vertex_output_bitvecs[p_from.first], p_from.second});
 
         for (auto p_to : ports_to) {
+            w.equivalence_class = equivalence_class(get_edge(p_from, p_to, g), g); //muss eigentlich nur einmal aufgerufen werden
             if (is_in(p_to.first, output_vertices))
                 w.io_ports.push_back({wire_structure.output_bitvec, output_idx(p_to.first, gbn)});
             else
@@ -64,7 +63,7 @@ WireStructure build_wire_structure(const GBN &gbn) {
         }
 
         //build dependency
-        if (type(p_from.first, g) == INPUT) {
+        /*if (type(p_from.first, g) == INPUT) {
             master_wires_map.insert(std::pair<Port, std::size_t>(p_from, w.name));
 
         } else {
@@ -83,14 +82,14 @@ WireStructure build_wire_structure(const GBN &gbn) {
             }
             else
                 w.independent = false;
-        }
+        }*/
 
         wire_structure.wires.push_back(w);
     }
 
 
     //build actual dependency
-    for (auto &wire : wire_structure.wires) {
+    /*for (auto &wire : wire_structure.wires) {
         if (!wire.independent) {
 
             bool still_dependent = true;
@@ -144,6 +143,10 @@ WireStructure build_wire_structure(const GBN &gbn) {
                 }
             }
         }
+    }*/
+
+    for(auto wire : wire_structure.wires) {
+        wire_structure.equivalence_classes_vec[wire.equivalence_class].push_back(wire);
     }
 
     return wire_structure;
@@ -165,8 +168,9 @@ void print_wire_structure(std::ostream &ostr, const WireStructure &wire_structur
         for (auto[bitvec, pos] : w.io_ports)
             ostr << pos << " ";
         ostr << std::endl;
-        if (!w.independent)
-            ostr << "master wire: " << w.master_wire << std::endl;
+        //if (!w.independent)
+        //   ostr << "master wire: " << w.master_wire << std::endl;
+        ostr << "equivalence class: " << w.equivalence_class << std::endl;
     }
 }
 

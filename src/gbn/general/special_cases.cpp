@@ -14,6 +14,7 @@ GBN build_uniform_independent_obn(std::size_t n_vertices)
 
 		auto e_new = boost::add_edge(v,v+n_vertices,g).first;
 		put(edge_position, g, e_new, std::make_pair(0,0));
+        put(edge_equivalence_class, g, e_new, max_equivalence_counter_and_increase(gbn));
 	}
 
 	return gbn;
@@ -33,6 +34,7 @@ GBN build_independent_obn(std::vector<std::pair<double,double>> rv_dists)
 
 		auto e_new = boost::add_edge(v,v+rv_dists.size(),g).first;
 		put(edge_position, g, e_new, std::make_pair(0,0));
+        put(edge_equivalence_class, g, e_new, max_equivalence_counter_and_increase(gbn));
 	}
 
 	return gbn;
@@ -47,6 +49,7 @@ GBN build_obn_without_knowledge(std::size_t n_vertices)
 	{
 		auto e_new = boost::add_edge(v,v+n_vertices,g).first;
 		put(edge_position, g, e_new, std::make_pair(0,0));
+        put(edge_equivalence_class, g, e_new, max_equivalence_counter_and_increase(gbn));
 	}
 
 	return gbn;

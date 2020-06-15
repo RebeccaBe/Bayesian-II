@@ -12,6 +12,7 @@ struct Wire {
 
     bool independent = true;
     std::size_t master_wire;
+    std::size_t equivalence_class;
     //std::vector<std::size_t> slaveWires; //TODO: anderer Ansatz
     std::size_t name; //v1
 };
@@ -25,6 +26,8 @@ struct WireStructure {
     BitVecPtr output_bitvec;
 
     std::vector<Wire> wires;
+
+    std::map<std::size_t, std::vector<Wire>> equivalence_classes_vec;
 };
 
 

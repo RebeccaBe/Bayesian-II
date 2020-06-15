@@ -48,6 +48,7 @@ std::pair<Vertex, Vertex> split_vertex(GBN& gbn, Vertex v)
 			auto tmp = boost::add_edge(std::get<0>(p), v_front, gbn.graph);
 			auto e = tmp.first;
 			put(edge_position, gbn.graph, e, std::pair<std::size_t, std::size_t>{ std::get<1>(p), i_front_port++ });
+            put(edge_equivalence_class, gbn.graph, e, max_equivalence_counter_and_increase(gbn));
 		}
 
 		// precessors of back
@@ -55,6 +56,7 @@ std::pair<Vertex, Vertex> split_vertex(GBN& gbn, Vertex v)
 			auto tmp = boost::add_edge(std::get<0>(p), v_back, gbn.graph);
 			auto e = tmp.first;
 			put(edge_position, gbn.graph, e, std::pair<std::size_t, std::size_t>{ std::get<1>(p), i_back_port++ });
+            put(edge_equivalence_class, gbn.graph, e, max_equivalence_counter_and_increase(gbn));
 		}
 	}
 
@@ -64,6 +66,7 @@ std::pair<Vertex, Vertex> split_vertex(GBN& gbn, Vertex v)
 		auto tmp = boost::add_edge(v_front, v_back, gbn.graph);
 		auto e = tmp.first;
 		put(edge_position, gbn.graph, e, std::pair<std::size_t, std::size_t>{ i, i+m.n });
+        put(edge_equivalence_class, gbn.graph, e, max_equivalence_counter_and_increase(gbn));
 		// put(edge_position, gbn.graph, e, std::pair<std::size_t, std::size_t>{ i, i });
 	}
 
@@ -77,12 +80,14 @@ std::pair<Vertex, Vertex> split_vertex(GBN& gbn, Vertex v)
 			auto tmp = boost::add_edge(v_back, std::get<0>(suc), gbn.graph);
 			auto e = tmp.first;
 			put(edge_position, gbn.graph, e, std::pair<std::size_t, std::size_t>{ 0, std::get<2>(suc) });
+            put(edge_equivalence_class, gbn.graph, e, max_equivalence_counter_and_increase(gbn));
 		}
 		else
 		{
 			auto tmp = boost::add_edge(v_front, std::get<0>(suc), gbn.graph);
 			auto e = tmp.first;
 			put(edge_position, gbn.graph, e, std::pair<std::size_t, std::size_t>{ port_from_original-1, std::get<2>(suc) });
+            put(edge_equivalence_class, gbn.graph, e, max_equivalence_counter_and_increase(gbn));
 		}
 	}
 

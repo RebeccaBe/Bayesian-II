@@ -36,7 +36,9 @@ bool check_and_apply_F1(GBN& gbn, Vertex v, std::string& op)
 			{
 				auto v_new = add_vertex(gbn, std::make_shared<OneBMatrix>(m.b),std::string("1_") + std::to_string(m.b));
 				auto e = boost::add_edge(v_new, p.first, g).first;
+				auto eq_class = equivalence_class(get_edge(std::pair<Vertex, std::size_t>{v, 0}, std::pair<Vertex, std::size_t>{p.first, p.second}, g), g);
 				put(edge_position, g, e, std::pair<std::size_t, std::size_t>{ 0, p.second });
+                put(edge_equivalence_class, g, e, eq_class);
 			}
 
 			remove_vertex(v,gbn);
@@ -73,23 +75,28 @@ bool check_and_apply_F2(GBN& gbn, Vertex v, std::string& op)
 
 	// if we reached here, then v_pre is a stochastic vertex whose only successor is a terminator
 
-	std::vector<Port> precessor_ports;	
-	for(auto e : boost::make_iterator_range(boost::in_edges(v,g)))
-		precessor_ports.push_back({ boost::source(e,g), port_from(e,g) });
+	std::vector<Port> precessor_ports;
+	std::map<Port, size_t> eq_classes;
+	for(auto e : boost::make_iterator_range(boost::in_edges(v,g))) {
+        precessor_ports.push_back({boost::source(e, g), port_from(e, g)});
+        eq_classes[{boost::source(e, g), port_from(e, g)}] = equivalence_class(e, g);
+    }
 
 	for(auto e : boost::make_iterator_range(boost::out_edges(v,g)))
 	{
 		auto v_suc = boost::target(e,g);
 		remove_vertex(v_suc,gbn);
 	}
-	remove_vertex(v,gbn);
 
 	for(auto& p : precessor_ports)
 	{
 		auto v_term = add_vertex(gbn, std::make_shared<TerminatorMatrix>(), "T");
 		auto e = boost::add_edge(p.first, v_term, g).first;
 		put(edge_position, g, e, std::pair<std::size_t, std::size_t>{ p.second, 0 });
+        put(edge_equivalence_class, g, e, eq_classes[p]);
 	}
+
+    remove_vertex(v,gbn);
 
 	return true;
 }
@@ -169,11 +176,13 @@ bool check_and_apply_F3(GBN& gbn, Vertex v, std::string& op)
 
 		if(found) {
 			found_once = true;
+			auto eq_class = equivalence_class(get_edge(pre_port, post_port, g), g); // TODO: correct??
 			boost::remove_edge_if([&](const Edge& e) {
 				return boost::source(e,g) == pre_port.first && boost::target(e,g) == post_port.first && port_from(e,g) == pre_port.second && port_to(e,g) == post_port.second;	
 			}, g);
 			auto e_new = boost::add_edge(v,post_port.first,g).first;
 			put(edge_position, g, e_new, std::pair<std::size_t, std::size_t>{ F_idx, post_port.second });
+            put(edge_equivalence_class, g, e_new, eq_class);
 		}
 	}
 	while(found);
@@ -235,9 +244,12 @@ bool check_and_apply_F4(GBN& gbn, Vertex v_oneb, std::string& op)
 	auto& m_F = dynamic_cast<FMatrix&>(*p_m_F);
 
 	std::vector<Port> output_ports;
+	std::map<Port, std::size_t> eq_classes;
 	for(auto e : boost::make_iterator_range(boost::out_edges(v_F,g)))
-		if(port_from(e,g) == F_port)
-			output_ports.push_back({ boost::target(e,g), port_to(e,g) });
+		if(port_from(e,g) == F_port) {
+            output_ports.push_back({boost::target(e, g), port_to(e, g)});
+            eq_classes[{boost::target(e, g), port_to(e, g)}] = equivalence_class(e, g);
+        }
 
 	if(m_F.k == 1) 
 	{
@@ -249,6 +261,7 @@ bool check_and_apply_F4(GBN& gbn, Vertex v_oneb, std::string& op)
 		{
 			auto e = boost::add_edge(v,p.first,g).first;
 			put(edge_position,g,e,std::pair<std::size_t,std::size_t>{ 0, p.second });
+            put(edge_equivalence_class,g,e,eq_classes[p]);
 		}
 	}
 	else
@@ -277,6 +290,7 @@ bool check_and_apply_F4(GBN& gbn, Vertex v_oneb, std::string& op)
 		{
 			auto e = boost::add_edge(v_oneb,p.first,g).first;
 			put(edge_position,g,e,std::pair<std::size_t,std::size_t>{ 0, p.second });
+            put(edge_equivalence_class,g,e,eq_classes[p]);
 		}
 	}
 
@@ -359,6 +373,7 @@ bool check_and_apply_F5(GBN& gbn, Vertex v_oneb, std::string& op)
 			{
 				auto e_new = boost::add_edge(v_pre, boost::target(e,g), g).first;
 				put(edge_position, g, e_new, std::pair<std::size_t, std::size_t>{ port_pre, port_to(e,g) });
+                put(edge_equivalence_class, g, e_new, equivalence_class(e, g));
 			}
 		}
 	}
@@ -368,6 +383,7 @@ bool check_and_apply_F5(GBN& gbn, Vertex v_oneb, std::string& op)
 		{
 			auto e_new = boost::add_edge(v_oneb, boost::target(e,g), g).first;	
 			put(edge_position, g, e_new, std::pair<std::size_t, std::size_t>{ 0, port_to(e,g) });
+            put(edge_equivalence_class, g, e_new, equivalence_class(e, g));
 		}
 	}
 
@@ -398,10 +414,12 @@ bool simplify_matrix_for_duplicate_inputs(GBN& gbn, Vertex v, std::string& op)
 	auto& m = *matrix(v,g);
 
 	std::map<Port,std::vector<std::size_t>> external_input_to_input_port;
+    std::map<Port,std::size_t> eq_classes;
 	for(auto e : boost::make_iterator_range(boost::in_edges(v,g)))
 	{
 		auto ext_input = std::make_pair(boost::source(e,g), port_from(e,g));
 		external_input_to_input_port[ext_input].push_back(port_to(e,g));
+		eq_classes[ext_input] = equivalence_class(e, g);
 	}
 
 	bool found_duplicate = false;
@@ -459,6 +477,7 @@ bool simplify_matrix_for_duplicate_inputs(GBN& gbn, Vertex v, std::string& op)
 	{
 		auto e = boost::add_edge(port.first, v, g).first;
 		put(edge_position, g, e, std::make_pair(port.second,i_counter));
+        put(edge_equivalence_class, g, e, eq_classes[port]);
 		i_counter++;
 	}
 
@@ -588,6 +607,7 @@ bool reduce_diagonal_matrix(GBN& gbn, Vertex v, std::string& op) {
 
 			auto edge_T = boost::add_edge(source_vec, v_T, g).first;
 			put(edge_position, g, edge_T, std::make_pair(source_port, 0));
+            put(edge_equivalence_class, g, edge_T, equivalence_class(e_in, g));
 
 			for(auto e_out : boost::make_iterator_range(boost::out_edges(v, g))) {
 				if(port_from(e_out,g) == port_to(e_in,g)) {
@@ -596,6 +616,7 @@ bool reduce_diagonal_matrix(GBN& gbn, Vertex v, std::string& op) {
 
 					auto edge_Zero = boost::add_edge(v_Zero, target_vec, g).first;
 					put(edge_position, g, edge_Zero, std::make_pair(0, target_port));
+                    put(edge_equivalence_class, g, edge_Zero, equivalence_class(e_out, g));
 				}
 			}
 		}
@@ -658,6 +679,7 @@ bool reduce_diagonal_matrix(GBN& gbn, Vertex v, std::string& op) {
 
                             auto edge_new = boost::add_edge(source_vec, target_vec, g).first;
                             put(edge_position, g, edge_new, std::make_pair(source_port, target_port));
+                            put(edge_equivalence_class, g, edge_new, equivalence_class(e_in, g));
                         }
                     }
                 }
@@ -703,6 +725,7 @@ bool reduce_diagonal_matrix(GBN& gbn, Vertex v, std::string& op) {
 
 					auto edge_new = boost::add_edge(source_vec, v_new, g).first;
                     put(edge_position, g, edge_new, std::make_pair(source_port, target_port));
+                    put(edge_equivalence_class, g, edge_new, equivalence_class(e_in, g));
                 }
             }
 
@@ -715,6 +738,7 @@ bool reduce_diagonal_matrix(GBN& gbn, Vertex v, std::string& op) {
 
                     auto edge_new = boost::add_edge(v_new, target_vec, g).first;
                     put(edge_position, g, edge_new, std::make_pair(source_port, target_port));
+                    put(edge_equivalence_class, g, edge_new, equivalence_class(e_out, g));
                 }
             }
         }

@@ -1,7 +1,7 @@
 #include "gbn.h"
 
 GBN::GBN(Index n, Index m, Index n_inside_vertices)
-	:n(n), m(m), n_vertices(n_inside_vertices + n + m), graph(n_vertices), n_initial_inside_vertices(n_inside_vertices), n_initial_n(n), n_initial_m(m)
+	:n(n), m(m), n_vertices(n_inside_vertices + n + m), graph(n_vertices), n_initial_inside_vertices(n_inside_vertices), n_initial_n(n), n_initial_m(m),max_eq_class_counter(0)
 {
 	for(Index i = 0; i < n_vertices; i++)
 	{
@@ -164,7 +164,45 @@ std::vector<Edge> all_edges(std::vector<Vertex>& vertices, const GBNGraph& g) {
 
     std::vector<Edge> all_edges_vector (all_edges.begin(), all_edges.end());
      return all_edges_vector;
+
+     //ODER:
+    //return boost::edges(g);
 }
 
+std::size_t equivalence_class (const GBNGraph::edge_descriptor& e, const GBNGraph& g) {
+    return get(edge_equivalence_class, g, e);
+}
 
+std::vector<Edge> edges_of_equivalence_class(std::size_t eq_class, const GBN& gbn) {
+    std::vector<Edge> edges;
+    auto vertices = all_vertices(gbn);
 
+    for(auto e : all_edges(vertices, gbn.graph)) {
+        if(equivalence_class(e, gbn.graph) == eq_class)
+            edges.push_back(e);
+    }
+    return edges;
+}
+
+std::size_t max_equivalence_counter_and_increase(GBN& gbn){
+    std::size_t max_equivalence_class = gbn.max_eq_class_counter;
+    gbn.max_eq_class_counter++;
+    return max_equivalence_class;
+}
+
+Edge get_edge(const Port& v_from, const Port& v_to, const GBNGraph& g) {
+    for(auto e : boost::make_iterator_range(boost::out_edges(v_from.first,g))) {
+        if(boost::target(e, g) == v_to.first && port_from(e,g)==v_from.second && port_to(e,g)==v_to.second)
+            return e;
+    }
+    throw std::logic_error(std::string("Edge does not exist"));
+}
+
+Edge get_edge(const Vertex& v_from, const Vertex& v_to, const GBNGraph& g) {
+    auto e = boost::edge(v_from, v_to, g);
+
+    if(!e.second)
+        throw std::logic_error(std::string("Edge does not exist"));
+
+    return e.first;
+}

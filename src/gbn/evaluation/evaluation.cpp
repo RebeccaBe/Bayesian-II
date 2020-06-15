@@ -9,7 +9,7 @@
 #include "../simplification/global_simplification.h"
 #include "../simplification/local_simplification.h"
 
-bool debug_mode = false;
+bool debug_mode = true;
 
 // returns which vertices have to be updated
 // if wire. active == false afterwards hints towards carry bit
@@ -38,6 +38,34 @@ std::vector<Vertex> flip_wire(Wire &wire) {
     return changed_vertices;
 }
 
+std::vector<Vertex> flip_wires(std::vector<Wire> &wires) {
+    std::vector<Vertex> changed_vertices;
+
+    for (auto &wire : wires) {
+        wire.active = !wire.active;
+
+        for (auto[v, p_bitvec, i_bit] : wire.inside_ports) {
+            // TODO: following if could be replaced by one flip without branching?
+            if (wire.active)
+                p_bitvec->set(i_bit);
+            else
+                p_bitvec->reset(i_bit);
+            changed_vertices.push_back(v); // TODO: could be optimized out by using the vertices from wire...
+        }
+
+        for (auto[p_bitvec, i_bit] : wire.io_ports) {
+            p_bitvec->flip(i_bit);
+            // TODO: following if could be replaced by one flip without branching?
+            if (wire.active)
+                p_bitvec->set(i_bit);
+            else
+                p_bitvec->reset(i_bit);
+        }
+    }
+
+    return changed_vertices;
+}
+
 void update_dependent_wires(WireStructure &wire_structure, Wire independent_wire, std::vector<Vertex> &affected_vertices_vec) {
     for (Wire &w : wire_structure.wires) {
         if (!w.independent) {
@@ -49,13 +77,23 @@ void update_dependent_wires(WireStructure &wire_structure, Wire independent_wire
     }
 }
 
+void update_equivalence_class(WireStructure &wire_structure, std::size_t equivalence_class, std::vector<Vertex> &affected_vertices_vec) {
+    for (Wire &w : wire_structure.wires) {
+        if (w.equivalence_class) {
+            auto new_affected_vertices_vec = flip_wire(w);
+            affected_vertices_vec.insert(affected_vertices_vec.end(), new_affected_vertices_vec.begin(), new_affected_vertices_vec.end());
+        }
+    }
+}
+
 std::size_t get_edges(std::vector<Vertex> vertices, const GBN gbn) {
 
     auto sub_gbn = SubGBN::make_from_vertices(gbn, vertices);
 
     auto wire_structure = build_wire_structure(sub_gbn.gbn);
     auto wires = wire_structure.wires;
-    return std::count_if(wires.begin(), wires.end(), [](Wire w){return w.independent;});
+    //return std::count_if(wires.begin(), wires.end(), [](Wire w){return w.independent;});
+    return wire_structure.equivalence_classes_vec.size();
 }
 
 std::vector<Vertex> expand_list(GBN gbn, std::vector<Vertex> nodes) {
@@ -318,7 +356,7 @@ GBN node_elimination_FillIn(GBN& gbn, std::vector<Vertex> nodes) {
             for (auto neighbor_v : neighbors_v) {
                 std::vector<Vertex> neighbors_i = {v, neighbor_v};
 
-                SubGBN sub_gbn = SubGBN::make_from_vertices(gbn, neighbors_i);
+                SubGBN sub_gbn = SubGBN::make_from_vertices(gbn, neighbors_i, 1);
 
                 std::size_t v_degree = input_vertices(sub_gbn.gbn).size() + output_vertices(sub_gbn.gbn).size();
                 if (v_degree < min_degree) {
@@ -458,6 +496,7 @@ MatrixPtr evaluate_specific_place(std::size_t place, const GBN &gbn_og, Evaluati
         auto v_term = add_vertex(gbn, std::make_shared<TerminatorMatrix>(), "T");
         auto e_term = boost::add_edge(v_pre, v_term, g).first;
         put(edge_position, g, e_term, std::pair<std::size_t, std::size_t>{ e_pos.first, 0 });
+        put(edge_equivalence_class, g, e_term, equivalence_class(get_edge(v_pre, output_vertices[p], g), g));
 
         boost::remove_edge(v_pre, output_vertices[p], g);
     }
@@ -466,7 +505,7 @@ MatrixPtr evaluate_specific_place(std::size_t place, const GBN &gbn_og, Evaluati
     find_relevant_nodes(gbn, relevant_nodes, chosen_output);
     std::vector<Vertex> relevant_nodes_vector (relevant_nodes.begin(), relevant_nodes.end());
 
-    auto sub_gbn = SubGBN::make_from_vertices(gbn, relevant_nodes_vector);
+    auto sub_gbn = SubGBN::make_from_vertices(gbn, relevant_nodes_vector, 1);
 
     if(debug_mode) {
         std::ofstream f("Evaluation-step0.dot");
@@ -514,11 +553,13 @@ MatrixPtr evaluate(const GBN &gbn, EvaluationType eval_type) {
     m->add(*wire_structure.output_bitvec, *wire_structure.input_bitvec, product);
 
     std::size_t i_wire = 0;
-    if(debug_mode) std::cout << "number of independent wires:" << std::count_if(wires.begin(), wires.end(), [](Wire w){return w.independent;}) << std::endl;
+    //if(debug_mode) std::cout << "number of independent wires:" << std::count_if(wires.begin(), wires.end(), [](Wire w){return w.independent;}) << std::endl;
+    if(debug_mode) std::cout << "number of independent wires:" << wire_structure.equivalence_classes_vec.size() << std::endl;
+
     const std::size_t max_i_wire = wires.size();
 
     std::set<Vertex> affected_vertices; // TODO: optimization: replace this with flat set
-    while (i_wire < max_i_wire) // TODO: do this more efficiently with gray codes -> only one wire flip at a time needed
+    /*while (i_wire < max_i_wire) // TODO: do this more efficiently with gray codes -> only one wire flip at a time needed
     {
         auto &w = wires[i_wire];
 
@@ -554,9 +595,48 @@ MatrixPtr evaluate(const GBN &gbn, EvaluationType eval_type) {
             m->is_stochastic = false;
             break;
         }
+    }*/
+
+    std::size_t max_equivalence_class = gbn.max_eq_class_counter+1;
+    std::size_t eq_class = 0;
+    while (eq_class < max_equivalence_class) // TODO: do this more efficiently with gray codes -> only one wire flip at a time needed
+    {
+        auto &wires_vec = wire_structure.equivalence_classes_vec[eq_class];
+
+        if (!wires_vec.empty()) {
+
+            auto affected_vertices_vec = flip_wires(wires_vec);
+            affected_vertices.insert(affected_vertices_vec.begin(), affected_vertices_vec.end());
+
+            if (!wires_vec[0].active) // carry bit needed
+            {
+                eq_class++;
+            } else {
+                for (auto v : affected_vertices) {
+                    const auto &m_v = *matrix(v, g);
+                    auto p = m_v.get(*wire_structure.vertex_output_bitvecs[v],
+                                     *wire_structure.vertex_input_bitvecs[v]);
+                    bk.update_one_node(v, p);
+                }
+
+                double product = bk.get_product();
+                m->add(*wire_structure.output_bitvec, *wire_structure.input_bitvec, product);
+                affected_vertices.clear();
+                eq_class = 0;
+            }
+        } else
+            eq_class++;
     }
 
-    if(is_dynamic) {
+    for (auto v : inside_vertices) {
+        auto &m_v = *matrix(v, g);
+        if (!m_v.is_stochastic) {
+            m->is_stochastic = false;
+            break;
+        }
+    }
+
+    /*if(is_dynamic) {
         std::vector<std::tuple<Wire, std::size_t>> input_wires, output_wires;
         for (const auto w : wire_structure.wires)
             for (auto[pointer, index] : w.io_ports) {
@@ -570,7 +650,7 @@ MatrixPtr evaluate(const GBN &gbn, EvaluationType eval_type) {
             for(auto [input_wire, input_index] : input_wires)
                 if (output_wire.master_wire == input_wire.name)
                     m->diag_places.insert(std::pair<std::size_t, std::size_t>(output_index, input_index));
-    }
+    }*/
 
     return m;
 }

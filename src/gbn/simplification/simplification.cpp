@@ -6,14 +6,14 @@
 void simplification(GBN& gbn, std::function<void(const GBN&,std::string)> status_callback)
 {
 	apply_simplifications_for_each_vertex(gbn, status_callback, check_and_apply_CoUnit, check_and_apply_F1, check_and_apply_F2, check_and_apply_F3, check_and_apply_F4, check_and_apply_F5,
-			reduce_diagonal_matrix, merge_F_matrices_to_diagonal_matrix, split_vertex_if_multiple_outputs, simplify_matrix_for_duplicate_inputs,
+			reduce_diagonal_matrix, split_vertex_if_multiple_outputs, simplify_matrix_for_duplicate_inputs,
 			eliminate_stochastic_vertex_without_outputs, switch_substoch_to_front, normalize_substoch_front_vertices_without_inputs);
 }
 
 void non_normalizing_simplification(GBN& gbn, std::function<void(const GBN&,std::string)> status_callback)
 {
 	apply_simplifications_for_each_vertex(gbn, status_callback, check_and_apply_CoUnit, check_and_apply_F1, check_and_apply_F2, check_and_apply_F3, check_and_apply_F4, check_and_apply_F5,
-			merge_F_matrices_to_diagonal_matrix, split_vertex_if_multiple_outputs, simplify_matrix_for_duplicate_inputs,
+			split_vertex_if_multiple_outputs, simplify_matrix_for_duplicate_inputs,
 			eliminate_stochastic_vertex_without_outputs, switch_substoch_to_front);
 }
 
