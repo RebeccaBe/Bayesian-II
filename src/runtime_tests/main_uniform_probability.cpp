@@ -142,7 +142,7 @@ int main(int argc, const char** argv)
 
     std::ofstream csv_file(params["export-name"].as<std::string>()+".csv");
 
-    csv_file << "n_places;milliseconds_gbn;milliseconds_dist" << std::endl;
+    csv_file << "n_places;milliseconds_degree;milliseconds_fillin;milliseconds_dist" << std::endl;
 
     for(std::size_t n_places = cn_params.N_MIN_PLACES; n_places <= cn_params.N_MAX_PLACES; n_places++)
     {
@@ -164,20 +164,23 @@ int main(int argc, const char** argv)
                 cn = randomize_cn(n_places, n_transitions, n_min_tokens, n_max_tokens, cn_params.N_MIN_PRE_PLACES, cn_params.N_MAX_PRE_PLACES, cn_params.N_MIN_POST_PLACES, cn_params.N_MAX_POST_PLACES, mt);
             }
             auto cn_copy = cn;
+            auto cn_copy_copy = cn;
 
             std::vector<std::size_t> chosen_transitions;
             std::vector<std::vector<std::pair<std::size_t, double>>> i_transitions;
 
-            auto gbn = build_uniform_independent_obn(n_places);
+            auto gbn_degree = build_uniform_independent_obn(n_places);
+            auto gbn_fillIn = gbn_degree;
             auto rand_transition_helper = RandomTransitionHelper(cn, RandomTransitionHelper::PROBABILITY, 1, cn_params.N_MAX_TRANSITIONS_PER_OP);
             rand_transition_helper.transition_bubbles = rand_transition_helper.make_transitions_w_probabilities(mt,1);
 
-            std::string operation;
+            //std::string operation;
 
-            auto start_time_gbn = std::chrono::steady_clock::now();
+            auto start_time_gbn_degree = std::chrono::steady_clock::now();
             for(std::size_t i_fire = 0; i_fire < cn_params.N_TRANSITIONS_PER_RUN; i_fire++) {
+                std::string operation;
                 if(is_detailed)
-                    std::cout << "gbn i_fire: " << i_fire << std::endl;
+                    std::cout << "gbn (degree) i_fire: " << i_fire << std::endl;
 
                 auto i_transition = rand_transition_helper.next_from_bubbles(mt);
                 auto chosen_transition = rand_transition_helper.choose_transition(cn, i_transition);
@@ -186,37 +189,57 @@ int main(int argc, const char** argv)
                 chosen_transitions.push_back(chosen_transition);
 
                 auto callback = (is_detailed) ? [&operation](std::string high_level, std::string low_level) { std::cout << high_level << " " << low_level << std::endl; } : std::function<void(std::string,std::string)>();
-                fire_with_probability_on_gbn(cn, gbn, i_transition, chosen_transition, callback);
+                fire_with_probability_on_gbn(cn, gbn_degree, i_transition, chosen_transition, callback);
 
                 if(is_detailed) {
                     std::ofstream f("run.dot");
-                    draw_gbn_graph(f, gbn, std::to_string(i_fire));
+                    draw_gbn_graph(f, gbn_degree, std::to_string(i_fire));
                 }
             }
-            auto p_m = evaluate_specific_place(0, gbn, cn_params.EVALUATION_TYPE);
-            auto end_time_gbn = std::chrono::steady_clock::now();
+            auto p_m_degree = evaluate_specific_place(0, gbn_degree, DEGREE);
+            auto end_time_gbn_degree = std::chrono::steady_clock::now();
 
+            auto start_time_gbn_fillIn = std::chrono::steady_clock::now();
+            for(std::size_t i_fire = 0; i_fire < cn_params.N_TRANSITIONS_PER_RUN; i_fire++) {
+                std::string operation;
+                if(is_detailed)
+                    std::cout << "gbn (fillIn) i_fire: " << i_fire << std::endl;
+
+                auto callback = (is_detailed) ? [&operation](std::string high_level, std::string low_level) { std::cout << high_level << " " << low_level << std::endl; } : std::function<void(std::string,std::string)>();
+                fire_with_probability_on_gbn(cn_copy, gbn_fillIn, i_transitions[i_fire], chosen_transitions[i_fire], callback);
+
+                if(is_detailed) {
+                    std::ofstream f("run.dot");
+                    draw_gbn_graph(f, gbn_fillIn, std::to_string(i_fire));
+                }
+            }
+            auto p_m_fillIn = evaluate_specific_place(0, gbn_fillIn, DEGREE);
+            auto end_time_gbn_fillIn = std::chrono::steady_clock::now();
 
             auto joint_dist = build_uniform_joint_dist(n_places);
             auto start_time_dist = std::chrono::steady_clock::now();
             for(std::size_t i_fire = 0; i_fire < cn_params.N_TRANSITIONS_PER_RUN; i_fire++) {
+                std::string operation;
                 if(is_detailed)
                     std::cout << "dist i_fire: " << i_fire << std::endl;
 
                 auto callback = (is_detailed) ? [&operation](std::string high_level, std::string low_level) { std::cout << high_level << " " << low_level << std::endl; } : std::function<void(std::string,std::string)>();
-                fire_with_probability_on_joint_dist(cn_copy, joint_dist, i_transitions[i_fire], chosen_transitions[i_fire], callback);
+                fire_with_probability_on_joint_dist(cn_copy_copy, joint_dist, i_transitions[i_fire], chosen_transitions[i_fire], callback);
             }
             auto end_time_dist = std::chrono::steady_clock::now();
 
-            double diff_milliseconds_gbn = std::chrono::duration<double, std::milli>(end_time_gbn-start_time_gbn).count();
+            double diff_milliseconds_gbn_degree = std::chrono::duration<double, std::milli>(end_time_gbn_degree-start_time_gbn_degree).count();
+            double diff_milliseconds_gbn_fillIn = std::chrono::duration<double, std::milli>(end_time_gbn_fillIn-start_time_gbn_fillIn).count();
             double diff_milliseconds_dist = std::chrono::duration<double, std::milli>(end_time_dist-start_time_dist).count();
 
 
-            csv_file << n_places << ";" << diff_milliseconds_gbn << ";" << diff_milliseconds_dist << std::endl;
+            csv_file << n_places << ";" << diff_milliseconds_gbn_degree << ";" << diff_milliseconds_gbn_fillIn << ";" << diff_milliseconds_dist << std::endl;
 
             if(is_detailed) {
-                if(!test_joint_dist_matrix_equal_marginal_prob(joint_dist, *p_m, 0))
-                    std::cout << "Matrices are not equal!" << std::endl;
+                if(!test_joint_dist_matrix_equal_marginal_prob(joint_dist, *p_m_degree, 0))
+                    std::cout << "Matrices are not equal! (degree)" << std::endl;
+                if(!test_joint_dist_matrix_equal_marginal_prob(joint_dist, *p_m_fillIn, 0))
+                    std::cout << "Matrices are not equal! (fillIn)" << std::endl;
             }
         }
     }

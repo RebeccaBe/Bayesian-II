@@ -9,7 +9,7 @@
 #include "../simplification/global_simplification.h"
 #include "../simplification/local_simplification.h"
 
-bool debug_mode = true;
+bool debug_mode = false;
 
 // returns which vertices have to be updated
 // if wire. active == false afterwards hints towards carry bit
