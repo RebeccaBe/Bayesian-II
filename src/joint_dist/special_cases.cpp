@@ -32,3 +32,21 @@ JointDist build_uniform_joint_dist(std::size_t n)
 
 	return dist;
 }
+
+JointDist calculate_marginals (std::size_t place, JointDist dist) {
+    JointDist dist_marg;
+    double val_zero = 0;
+    double val_one = 0;
+
+    for(auto& [marking,p] : dist) {
+        if(marking[place] == 0)
+            val_zero += p;
+        else
+            val_one += p;
+    }
+
+    dist_marg.insert({std::vector<bool> (1,false), val_zero});
+    dist_marg.insert({std::vector<bool> (1,true), val_one});
+
+    return dist_marg;
+}

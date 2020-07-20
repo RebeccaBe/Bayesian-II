@@ -90,6 +90,27 @@ bool test_joint_dist_matrix_equal_marginal_prob(const JointDist& joint_dist, con
     return equal;
 }
 
+std::size_t max_matrix_dimension(GBN gbn) {
+    auto g = gbn.graph;
+    std::size_t max = 0;
+    for(auto v : all_vertices(gbn)) {
+        if(type(v, g) != OUTPUT) {
+            auto m = matrix(v, gbn.graph);
+            switch(m->type) {
+                case DIAGONAL:
+                case F:
+                    if (m->n > max)
+                        max = m->n;
+                    break;
+                default:
+                    if ((m->n)+(m->m) > max)
+                        max = (m->n)+(m->m);
+            }
+        }
+    }
+    return max;
+}
+
 int main(int argc, const char** argv)
 {
     cxxopts::Options options("random_cn", "Generate random cn instance.");
@@ -142,7 +163,7 @@ int main(int argc, const char** argv)
 
     std::ofstream csv_file(params["export-name"].as<std::string>()+".csv");
 
-    csv_file << "n_places;milliseconds_degree;milliseconds_fillin;milliseconds_dist" << std::endl;
+    csv_file << "n_places;milliseconds_gbn;milliseconds_dist;max_dimension" << std::endl;
 
     for(std::size_t n_places = cn_params.N_MIN_PLACES; n_places <= cn_params.N_MAX_PLACES; n_places++)
     {
@@ -169,18 +190,16 @@ int main(int argc, const char** argv)
             std::vector<std::size_t> chosen_transitions;
             std::vector<std::vector<std::pair<std::size_t, double>>> i_transitions;
 
-            auto gbn_degree = build_uniform_independent_obn(n_places);
-            auto gbn_fillIn = gbn_degree;
+            auto gbn = build_uniform_independent_obn(n_places);
             auto rand_transition_helper = RandomTransitionHelper(cn, RandomTransitionHelper::PROBABILITY, 1, cn_params.N_MAX_TRANSITIONS_PER_OP);
             rand_transition_helper.transition_bubbles = rand_transition_helper.make_transitions_w_probabilities(mt,1);
 
-            //std::string operation;
+            std::string operation;
 
-            auto start_time_gbn_degree = std::chrono::steady_clock::now();
+            auto start_time_gbn = std::chrono::steady_clock::now();
             for(std::size_t i_fire = 0; i_fire < cn_params.N_TRANSITIONS_PER_RUN; i_fire++) {
-                std::string operation;
                 if(is_detailed)
-                    std::cout << "gbn (degree) i_fire: " << i_fire << std::endl;
+                    std::cout << "gbn i_fire: " << i_fire << std::endl;
 
                 auto i_transition = rand_transition_helper.next_from_bubbles(mt);
                 auto chosen_transition = rand_transition_helper.choose_transition(cn, i_transition);
@@ -189,57 +208,38 @@ int main(int argc, const char** argv)
                 chosen_transitions.push_back(chosen_transition);
 
                 auto callback = (is_detailed) ? [&operation](std::string high_level, std::string low_level) { std::cout << high_level << " " << low_level << std::endl; } : std::function<void(std::string,std::string)>();
-                fire_with_probability_on_gbn(cn, gbn_degree, i_transition, chosen_transition, callback);
+                fire_with_probability_on_gbn(cn, gbn, i_transition, chosen_transition, callback);
 
                 if(is_detailed) {
                     std::ofstream f("run.dot");
-                    draw_gbn_graph(f, gbn_degree, std::to_string(i_fire));
+                    draw_gbn_graph(f, gbn, std::to_string(i_fire));
                 }
             }
-            auto p_m_degree = evaluate_specific_place(0, gbn_degree, DEGREE);
-            auto end_time_gbn_degree = std::chrono::steady_clock::now();
-
-            auto start_time_gbn_fillIn = std::chrono::steady_clock::now();
-            for(std::size_t i_fire = 0; i_fire < cn_params.N_TRANSITIONS_PER_RUN; i_fire++) {
-                std::string operation;
-                if(is_detailed)
-                    std::cout << "gbn (fillIn) i_fire: " << i_fire << std::endl;
-
-                auto callback = (is_detailed) ? [&operation](std::string high_level, std::string low_level) { std::cout << high_level << " " << low_level << std::endl; } : std::function<void(std::string,std::string)>();
-                fire_with_probability_on_gbn(cn_copy, gbn_fillIn, i_transitions[i_fire], chosen_transitions[i_fire], callback);
-
-                if(is_detailed) {
-                    std::ofstream f("run.dot");
-                    draw_gbn_graph(f, gbn_fillIn, std::to_string(i_fire));
-                }
-            }
-            auto p_m_fillIn = evaluate_specific_place(0, gbn_fillIn, DEGREE);
-            auto end_time_gbn_fillIn = std::chrono::steady_clock::now();
+            auto p_m = evaluate_specific_place(0, gbn, cn_params.EVALUATION_TYPE);
+            auto end_time_gbn = std::chrono::steady_clock::now();
 
             auto joint_dist = build_uniform_joint_dist(n_places);
             auto start_time_dist = std::chrono::steady_clock::now();
             for(std::size_t i_fire = 0; i_fire < cn_params.N_TRANSITIONS_PER_RUN; i_fire++) {
-                std::string operation;
                 if(is_detailed)
                     std::cout << "dist i_fire: " << i_fire << std::endl;
 
                 auto callback = (is_detailed) ? [&operation](std::string high_level, std::string low_level) { std::cout << high_level << " " << low_level << std::endl; } : std::function<void(std::string,std::string)>();
                 fire_with_probability_on_joint_dist(cn_copy_copy, joint_dist, i_transitions[i_fire], chosen_transitions[i_fire], callback);
             }
+            calculate_marginals(0, joint_dist);
             auto end_time_dist = std::chrono::steady_clock::now();
 
-            double diff_milliseconds_gbn_degree = std::chrono::duration<double, std::milli>(end_time_gbn_degree-start_time_gbn_degree).count();
-            double diff_milliseconds_gbn_fillIn = std::chrono::duration<double, std::milli>(end_time_gbn_fillIn-start_time_gbn_fillIn).count();
+
+            double diff_milliseconds_gbn = std::chrono::duration<double, std::milli>(end_time_gbn-start_time_gbn).count();
             double diff_milliseconds_dist = std::chrono::duration<double, std::milli>(end_time_dist-start_time_dist).count();
 
 
-            csv_file << n_places << ";" << diff_milliseconds_gbn_degree << ";" << diff_milliseconds_gbn_fillIn << ";" << diff_milliseconds_dist << std::endl;
+            csv_file << n_places << ";" << diff_milliseconds_gbn << ";" << diff_milliseconds_dist << ";" << std::to_string(max_matrix_dimension(gbn)) << std::endl;
 
             if(is_detailed) {
-                if(!test_joint_dist_matrix_equal_marginal_prob(joint_dist, *p_m_degree, 0))
+                if(!test_joint_dist_matrix_equal_marginal_prob(joint_dist, *p_m, 0))
                     std::cout << "Matrices are not equal! (degree)" << std::endl;
-                if(!test_joint_dist_matrix_equal_marginal_prob(joint_dist, *p_m_fillIn, 0))
-                    std::cout << "Matrices are not equal! (fillIn)" << std::endl;
             }
         }
     }
